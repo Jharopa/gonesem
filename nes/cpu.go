@@ -17,7 +17,7 @@ const (
 
 const (
 	StackPage  uint16 = 0x0100
-	StackReset uint8  = 0xFD
+	StackReset uint8  = 0x00FD
 )
 
 type AddressingMode uint8
@@ -220,4 +220,75 @@ func (cpu *CPU) SetN(value uint8) {
 func (cpu *CPU) SetZN(value uint8) {
 	cpu.SetZ(value)
 	cpu.SetN(value)
+}
+
+func (cpu *CPU) Clock() {
+
+}
+
+func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
+	switch addrMode {
+	// Instruction's operand is implict to the intrustion or does not exist.
+	case AddressingModeImplied:
+		return 0
+
+	// Instruction's operand is within the accumulator.
+	case AddressingModeAccumulator:
+		return 0
+
+	// Address of instructions operand is immediately adjacent to the current program counter address.
+	case AddressingModeImmediate:
+		return cpu.PC + 1
+
+	// Address of instructions operand is the 8-bit value in the address immediately adjacent to
+	// the current program counter address mapped to the 0th page.
+	case AddressingModeZeroPage:
+		return uint16(cpu.Read(cpu.PC + 1))
+
+	// The same as zero page address but with X registers value applied as offset
+	// Mask applied to the 8 MSB in case of overflow due to offset.
+	case AddressingModeZeroPageX:
+		return uint16(cpu.Read(cpu.PC+1)+cpu.X) & 0x00FF
+
+	// The same as zero page address but with Y registers value applied as offset
+	// Mask applied to the 8 MSB in case of overflow due to offset.
+	case AddressingModeZeroPageY:
+		return uint16(cpu.Read(cpu.PC+1)+cpu.Y) & 0x00FF
+
+	// Special addressing mode for branching operations, the 8-bit value found at the address
+	// directly adjacent to the instructions operator is treated as a signed 2's compliment number
+	// (-128 to 127). This offset is then applied to the address following that to jump to an address
+	// within a 128 range around the address of the inital 8-bit value.
+	case AddressingModeRelative:
+		relAddr := uint16(cpu.Read(cpu.PC + 1))
+
+		if relAddr&0x80 != 0 {
+			relAddr |= 0xFF00
+		}
+
+		return (cpu.PC + 2) + relAddr
+
+	// Reads the 2 bytes starting from the address directly adjacent to the operator and treats
+	// that 16-bit number as an absoulte address.
+	case AddressingModeAbsolute:
+		return cpu.ReadWord(cpu.PC + 1)
+
+	// Same as absolute but the 16-bit address has the contents of the X register applied to it
+	// as an offset.
+	case AddressingModeAbsoluteX:
+		return cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
+
+	// Same as absolute but the 16-bit address has the contents of the Y register applied to it
+	// as an offset.
+	case AddressingModeAbsoluteY:
+		return cpu.ReadWord(cpu.PC+1) + uint16(cpu.Y)
+
+	case AddressingModeIndirect:
+	case AddressingModeIndirectX:
+	case AddressingModeIndirectY:
+	default:
+		panic(fmt.Sprintf("Invalid addressing mode %d", addrMode))
+	}
+
+	return 0
 }
