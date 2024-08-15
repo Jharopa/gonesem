@@ -24,17 +24,18 @@ type AddressingMode uint8
 
 const (
 	AddressingModeImplied AddressingMode = iota // IMP 0
-	AddressingModeImmediate 					// IMM 1
-	AddressingModeZeroPage 						// ZP0 2
-	AddressingModeZeroPageX 					// ZPX 3
-	AddressingModeZeroPageY 					// ZPY 4
-	AddressingModeRelative 						// REL 5
-	AddressingModeAbsolute 						// ABS 6
-	AddressingModeAbsoluteX 					// ABX 7
-	AddressingModeAbsoluteY						// ABY 8
-	AddressingModeIndirect 						// IND 9
-	AddressingModeIndirectX 					// IZX 10
-	AddressingModeIndirectY 					// IZY 11
+	AddressingModeAccumulator					// ACC 1
+	AddressingModeImmediate 					// IMM 2
+	AddressingModeZeroPage 						// ZP0 3
+	AddressingModeZeroPageX 					// ZPX 4
+	AddressingModeZeroPageY 					// ZPY 5
+	AddressingModeRelative 						// REL 6
+	AddressingModeAbsolute 						// ABS 7
+	AddressingModeAbsoluteX 					// ABX 8
+	AddressingModeAbsoluteY						// ABY 9
+	AddressingModeIndirect 						// IND 10
+	AddressingModeIndirectX 					// IZX 11
+	AddressingModeIndirectY 					// IZY 12
 )
 
 var mnemonics = [256] string {
