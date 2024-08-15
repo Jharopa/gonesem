@@ -1,12 +1,12 @@
 package main
 
 import (
-	"nesem/nes"
+	"gonesem/nes"
 )
 
 func main() {
 	cpu := nes.NewCPU()
-	
+
 	cpu.PrintProcessorStatus()
 
 	cpu.SetStatus(nes.StatusInterrupt, false)
