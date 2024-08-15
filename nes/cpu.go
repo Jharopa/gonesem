@@ -62,7 +62,7 @@ func (cpu *CPU) Reset() {
 	cpu.A = 0
 	cpu.X = 0
 	cpu.Y = 0
-	cpu.PC = cpu.ReadWord(0xFFCC)
+	cpu.PC = cpu.ReadWord(0xFFFC)
 	cpu.SP = StackReset
 	cpu.SR = StatusUnused | StatusInterrupt
 }
