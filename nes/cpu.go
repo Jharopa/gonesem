@@ -283,12 +283,53 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 	case AddressingModeAbsoluteY:
 		return cpu.ReadWord(cpu.PC+1) + uint16(cpu.Y)
 
+	/**
+		6502's implementation of pointers, 16-bit address read from address directly after opcode,
+		the value at this address is the address where the operand is acutally stored
+
+		NOTE. This address mode has a hardware bug on the 6502, if the pointer address
+		is on the last address of the page instead of the high byte of the address being read
+		from the 0th address of the next page the high byte wraps around to the 0th address of the
+		page the high byte is on, for example:
+
+	    |----------------------------|
+	    | Address | Value at address |
+		| 0x0100  | 0xFF             | <--- 3. Instead the read wraps around to the 0th address of
+		| ......  | ....             |      the low bytes current page making the operands address
+		| ......  | ....             |      0xFF29.
+		| ......  | ....             |
+	    | 0x01FB  | 0x00             |
+	    | 0x01FC  | 0x00             |
+	    | 0x01FF  | 0x29             | <--- 1. Low byte of ptr address residing on page boundary.
+		| 0x0200  | 0x11             | <--- 2. Expected that high by will be read 0th address on
+		|----------------------------|      following page making operands address 0x1129.
+	**/
 	case AddressingModeIndirect:
+		ptr := cpu.ReadWord(cpu.PC + 1)
+
+		if ptr&0x00FF == 0x00FF {
+			return uint16(cpu.Read(ptr&0xFF00))<<8 | uint16(cpu.Read(ptr))
+		} else {
+			return cpu.ReadWord(ptr)
+		}
+
 	case AddressingModeIndirectX:
+		ptr := cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
+
+		lo := uint16(cpu.Read(ptr & 0x00FF))
+		hi := uint16(cpu.Read((ptr + 1) & 0x00FF))
+
+		return hi<<8 | lo
+
 	case AddressingModeIndirectY:
+		ptr := cpu.ReadWord(cpu.PC + 1)
+
+		lo := uint16(cpu.Read(ptr) & 0x00FF)
+		hi := uint16(cpu.Read(ptr+1) & 0x00FF)
+
+		return (hi<<8 | lo) + uint16(cpu.Y)
+
 	default:
 		panic(fmt.Sprintf("Invalid addressing mode %d", addrMode))
 	}
-
-	return 0
 }
