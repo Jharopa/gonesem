@@ -1,6 +1,8 @@
 package nes
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Status uint8
 
@@ -37,6 +39,11 @@ const (
 	AddressingModeIndirectX                         // IZX 11
 	AddressingModeIndirectY                         // IZY 12
 )
+
+type InstructionArgs struct {
+	addrMode AddressingMode
+	address uint16
+}
 
 type CPU struct {
 	A  uint8  // Accumulator register
@@ -294,14 +301,14 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 
 	    |----------------------------|
 	    | Address | Value at address |
-		| 0x0100  | 0xFF             | <--- 3. Instead the read wraps around to the 0th address of
+		| 0x0200  | 0xFF             | <--- 3. Instead the read wraps around to the 0th address of
 		| ......  | ....             |      the low bytes current page making the operands address
 		| ......  | ....             |      0xFF29.
 		| ......  | ....             |
-	    | 0x01FB  | 0x00             |
-	    | 0x01FC  | 0x00             |
-	    | 0x01FF  | 0x29             | <--- 1. Low byte of ptr address residing on page boundary.
-		| 0x0200  | 0x11             | <--- 2. Expected that high by will be read 0th address on
+	    | 0x02FD  | 0x00             |
+	    | 0x02FE  | 0x00             |
+	    | 0x02FF  | 0x29             | <--- 1. Low byte of ptr address residing on page boundary.
+		| 0x0300  | 0x11             | <--- 2. Expected that high by will be read 0th address on
 		|----------------------------|      following page making operands address 0x1129.
 	**/
 	case AddressingModeIndirect:
@@ -333,3 +340,48 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 		panic(fmt.Sprintf("Invalid addressing mode %d", addrMode))
 	}
 }
+
+/**
+Add with carry
+**/
+func (cpu *CPU) ADC(args InstructionArgs) {
+
+}
+
+/**
+Logical And
+* Logical And operand with contents of accumulator
+* Set zero status if resulting value is 0
+* Set negative status if resulting value's 7th bit is set
+**/
+func (cpu *CPU) ADD(args InstructionArgs) {
+	operand := cpu.Read(args.address)
+	cpu.A &= operand
+	cpu.SetZN(cpu.A)
+}
+
+/** 
+Arithmetic Shift Left
+* Shift contents of address 1 bit left
+* Set contents of bit 7 in carry status
+* Set zero status if resulting value is 0
+* Set negative status if resulting value's 7th bit is set
+
+Function contains two paths that performs above steps, one working
+on the accumulator and the other on a memory address depending on the 
+addressing mode of instruction.
+**/
+func (cpu *CPU) ASL(args InstructionArgs) {
+	if args.addrMode == AddressingModeAccumulator {
+		cpu.SetStatus(StatusCarry, cpu.A & 0x80 != 0)
+		cpu.A <<= 1
+		cpu.SetZN(cpu.A)
+	} else {
+		operand := cpu.Read(args.address)
+		cpu.SetStatus(StatusCarry, operand & 0x80 != 0)
+		operand <<= 1
+		cpu.SetZN(operand)
+		cpu.Write(args.address, operand)
+	}
+}
+ 
