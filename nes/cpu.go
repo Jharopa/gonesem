@@ -297,7 +297,7 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 		NOTE. This address mode has a hardware bug on the 6502, if the pointer address
 		is on the last address of the page instead of the high byte of the address being read
 		from the 0th address of the next page the high byte wraps around to the 0th address of the
-		page the high byte is on, for example:
+		page the low byte is on, for example:
 
 	    |----------------------------|
 	    | Address | Value at address |
@@ -312,12 +312,12 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 		|----------------------------|      following page making operands address 0x1129.
 	**/
 	case AddressingModeIndirect:
-		ptr := cpu.ReadWord(cpu.PC + 1)
+		ptrAddr := cpu.ReadWord(cpu.PC + 1)
 
-		if ptr&0x00FF == 0x00FF {
-			return uint16(cpu.Read(ptr&0xFF00))<<8 | uint16(cpu.Read(ptr))
+		if ptrAddr&0x00FF == 0x00FF {
+			return uint16(cpu.Read(ptrAddr&0xFF00))<<8 | uint16(cpu.Read(ptrAddr))
 		} else {
-			return cpu.ReadWord(ptr)
+			return cpu.ReadWord(ptrAddr)
 		}
 
 	case AddressingModeIndirectX:
