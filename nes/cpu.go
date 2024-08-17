@@ -321,15 +321,15 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 		}
 
 	case AddressingModeIndirectX:
-		ptr := cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
+		ptr := uint16(cpu.Read(cpu.PC+1))
 
-		lo := uint16(cpu.Read(ptr & 0x00FF))
-		hi := uint16(cpu.Read((ptr + 1) & 0x00FF))
+		lo := uint16(cpu.Read((ptr + uint16(cpu.X)) & 0x00FF))
+		hi := uint16(cpu.Read((ptr + uint16(cpu.X) + 1) & 0x00FF))
 
 		return hi<<8 | lo
 
 	case AddressingModeIndirectY:
-		ptr := cpu.ReadWord(cpu.PC + 1)
+		ptr := uint16(cpu.Read(cpu.PC + 1))
 
 		lo := uint16(cpu.Read(ptr) & 0x00FF)
 		hi := uint16(cpu.Read(ptr+1) & 0x00FF)
