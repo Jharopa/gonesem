@@ -42,7 +42,7 @@ const (
 
 type InstructionArgs struct {
 	addrMode AddressingMode
-	address uint16
+	address  uint16
 }
 
 type CPU struct {
@@ -321,7 +321,7 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 		}
 
 	case AddressingModeIndirectX:
-		ptr := uint16(cpu.Read(cpu.PC+1))
+		ptr := uint16(cpu.Read(cpu.PC + 1))
 
 		lo := uint16(cpu.Read((ptr + uint16(cpu.X)) & 0x00FF))
 		hi := uint16(cpu.Read((ptr + uint16(cpu.X) + 1) & 0x00FF))
@@ -341,26 +341,31 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 	}
 }
 
-/**
+/*
+*
 Add with carry
-**/
+*
+*/
 func (cpu *CPU) ADC(args InstructionArgs) {
 
 }
 
-/**
+/*
+*
 Logical And
 * Logical And operand with contents of accumulator
 * Set zero status if resulting value is 0
 * Set negative status if resulting value's 7th bit is set
-**/
+*
+*/
 func (cpu *CPU) ADD(args InstructionArgs) {
 	operand := cpu.Read(args.address)
 	cpu.A &= operand
 	cpu.SetZN(cpu.A)
 }
 
-/** 
+/*
+*
 Arithmetic Shift Left
 * Shift contents of address 1 bit left
 * Set contents of bit 7 in carry status
@@ -368,20 +373,146 @@ Arithmetic Shift Left
 * Set negative status if resulting value's 7th bit is set
 
 Function contains two paths that performs above steps, one working
-on the accumulator and the other on a memory address depending on the 
+on the accumulator and the other on a memory address depending on the
 addressing mode of instruction.
-**/
+*
+*/
 func (cpu *CPU) ASL(args InstructionArgs) {
 	if args.addrMode == AddressingModeAccumulator {
-		cpu.SetStatus(StatusCarry, cpu.A & 0x80 != 0)
+		cpu.SetStatus(StatusCarry, cpu.A&0x80 != 0)
 		cpu.A <<= 1
 		cpu.SetZN(cpu.A)
 	} else {
 		operand := cpu.Read(args.address)
-		cpu.SetStatus(StatusCarry, operand & 0x80 != 0)
+		cpu.SetStatus(StatusCarry, operand&0x80 != 0)
 		operand <<= 1
 		cpu.SetZN(operand)
 		cpu.Write(args.address, operand)
 	}
 }
- 
+
+/*
+*
+Branch if Carry Clear
+* Checks if carry bit in status register is clear, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BCC(args InstructionArgs) {
+	if !cpu.GetStatus(StatusCarry) {
+		cpu.PC = args.address
+	}
+}
+
+/*
+*
+Branch if Carry Set
+* Checks if carry bit in status register is set, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BCS(args InstructionArgs) {
+	if cpu.GetStatus(StatusCarry) {
+		cpu.PC = args.address
+	}
+}
+
+/*
+*
+Branch if Equal
+* Checks if zero bit in status register is set, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BEQ(args InstructionArgs) {
+	if cpu.GetStatus(StatusZero) {
+		cpu.PC = args.address
+	}
+}
+
+/*
+*
+Bit Test
+* Reads operand from memory
+* ANDs the contents of the accumulator with the operand from memory, setting
+the zero status flag based on the result of that operation.
+* Values of bit 6 and 7 of operand are used to set the negative and overflow
+status flags respectively.
+*
+*/
+func (cpu *CPU) BIT(args InstructionArgs) {
+	operand := cpu.Read(args.address)
+
+	cpu.SetZ(cpu.A & operand)
+	cpu.SetStatus(StatusOverflow, operand&(1<<6) != 0)
+	cpu.SetStatus(StatusNegative, operand&(1<<7) != 0)
+}
+
+/*
+*
+Branch if Minus
+* Checks if negative bit in status register is set, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BMI(args InstructionArgs) {
+	if cpu.GetStatus(StatusNegative) {
+		cpu.PC = args.address
+	}
+}
+
+/*
+*
+Branch if Not Equal
+* Checks if zero bit in status register is clear, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BNE(args InstructionArgs) {
+	if !cpu.GetStatus(StatusZero) {
+		cpu.PC = args.address
+	}
+}
+
+/*
+*
+Branch if Positive
+* Checks if negative bit in status register is clear, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BPL(args InstructionArgs) {
+	if !cpu.GetStatus(StatusNegative) {
+		cpu.PC = args.address
+	}
+}
+
+func (cpu *CPU) BRK(args InstructionArgs) {
+
+}
+
+/*
+*
+Branch if Overflow is Clear
+* Checks if overflow bit in status register is clear, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BVC(args InstructionArgs) {
+	if !cpu.GetStatus(StatusOverflow) {
+		cpu.PC = args.address
+	}
+}
+
+/*
+*
+Branch if Overflow is Set
+* Checks if overflow bit in status register is clear, if so sets the program counter
+register to the pre-calculated relative address in address argument.
+*
+*/
+func (cpu *CPU) BVS(args InstructionArgs) {
+	if cpu.GetStatus(StatusOverflow) {
+		cpu.PC = args.address
+	}
+}
