@@ -299,15 +299,15 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 		from the 0th address of the next page the high byte wraps around to the 0th address of the
 		page the low byte is on, for example:
 
-	    |----------------------------|
-	    | Address | Value at address |
+		|----------------------------|
+		| Address | Value at address |
 		| 0x0200  | 0xFF             | <--- 3. Instead the read wraps around to the 0th address of
 		| ......  | ....             |      the low bytes current page making the operands address
 		| ......  | ....             |      0xFF29.
 		| ......  | ....             |
-	    | 0x02FD  | 0x00             |
-	    | 0x02FE  | 0x00             |
-	    | 0x02FF  | 0x29             | <--- 1. Low byte of ptr address residing on page boundary.
+		| 0x02FD  | 0x00             |
+		| 0x02FE  | 0x00             |
+		| 0x02FF  | 0x29             | <--- 1. Low byte of ptr address residing on page boundary.
 		| 0x0300  | 0x11             | <--- 2. Expected that high by will be read 0th address on
 		|----------------------------|      following page making operands address 0x1129.
 	**/
