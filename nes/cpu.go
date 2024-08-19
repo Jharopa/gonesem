@@ -516,3 +516,164 @@ func (cpu *CPU) BVS(args InstructionArgs) {
 		cpu.PC = args.address
 	}
 }
+
+func (cpu *CPU) CLC(args InstructionArgs) {
+	cpu.SetStatus(StatusCarry, false)
+}
+
+func (cpu *CPU) CLD(args InstructionArgs) {
+	cpu.SetStatus(StatusDecimal, false)
+}
+
+func (cpu *CPU) CLI(args InstructionArgs) {
+	cpu.SetStatus(StatusInterrupt, false)
+}
+
+func (cpu *CPU) CLV(args InstructionArgs) {
+	cpu.SetStatus(StatusOverflow, false)
+}
+
+/**
+Compare
+* Reads operand from memory
+* Sets carry bit of status regsiter if accumulator's contents is >= operand
+* Sets zero bit of status register if accumulators's contents == operand
+* Sets negative bit of status register if accumulators's contents < operand
+**/
+func (cpu *CPU) CMP(args InstructionArgs) {
+	operand := cpu.Read(args.address)
+
+	cpu.SetStatus(StatusCarry, cpu.A >= operand)
+	cpu.SetZN(cpu.A - operand)
+}
+
+/**
+Compare X Register
+* Reads operand from memory
+* Sets carry bit of status regsiter if X registers' contents is >= operand
+* Sets zero bit of status register if X registers' contents == operand
+* Sets negative bit of status register if X registers' contents < operand
+**/
+func (cpu *CPU) CPX(args InstructionArgs) {
+	operand := cpu.Read(args.address)
+
+	cpu.SetStatus(StatusCarry, cpu.X >= operand)
+	cpu.SetZN(cpu.X - operand)
+}
+
+/**
+Compare Y Register
+* Reads operand from memory
+* Sets carry bit of status regsiter if Y registers' contents is >= operand
+* Sets zero bit of status register if Y registers' contents == operand 
+* Sets negative bit of status register if Y registers' contents < operand
+**/
+func (cpu *CPU) CPY(args InstructionArgs) {
+	operand := cpu.Read(args.address)
+
+	cpu.SetStatus(StatusCarry, cpu.Y >= operand)
+	cpu.SetZN(cpu.Y - operand)
+}
+
+func (cpu *CPU) DEC(args InstructionArgs) {
+	operand := cpu.Read(args.address) - 1
+
+	cpu.Write(args.address, operand)
+	cpu.SetZN(operand)
+} 
+
+func (cpu *CPU) DEX(args InstructionArgs) {
+	cpu.X--
+	cpu.SetZN(cpu.X)
+} 
+
+func (cpu *CPU) DEY(args InstructionArgs) {
+	cpu.Y--
+	cpu.SetZN(cpu.Y)
+} 
+
+func (cpu *CPU) EOR(args InstructionArgs) {
+	cpu.A ^= cpu.Read(args.address)
+	cpu.SetZN(cpu.A)
+}
+
+func (cpu *CPU) INC(args InstructionArgs) {
+	operand := cpu.Read(args.address) + 1
+
+	cpu.Write(args.address, operand)
+	cpu.SetZN(operand)
+}
+
+func (cpu *CPU) INX(args InstructionArgs) {
+	cpu.X++
+	cpu.SetZN(cpu.X)
+}
+
+func (cpu *CPU) INY(args InstructionArgs) {
+	cpu.Y++
+	cpu.SetZN(cpu.Y)
+}
+
+func (cpu *CPU) JMP(args InstructionArgs) {
+	cpu.PushWord(cpu.PC - 1)
+	cpu.PC = args.address
+}
+
+func (cpu *CPU) LDA(args InstructionArgs) {
+	cpu.A = cpu.Read(args.address)
+	cpu.SetZN(cpu.A)
+}
+
+func (cpu *CPU) LDX(args InstructionArgs) {
+	cpu.X = cpu.Read(args.address)
+	cpu.SetZN(cpu.X)
+}
+
+func (cpu *CPU) LDY(args InstructionArgs) {
+	cpu.Y = cpu.Read(args.address)
+	cpu.SetZN(cpu.Y)
+}
+
+func (cpu *CPU) LSR(args InstructionArgs) {
+	if args.addrMode == AddressingModeAccumulator {
+		cpu.SetStatus(StatusCarry, cpu.A&0x0001 != 0)
+		cpu.A >>= 1
+		cpu.SetZN(cpu.A)
+	} else {
+		operand := cpu.Read(args.address)
+		cpu.SetStatus(StatusCarry, operand&0x0001 != 0)
+		operand >>= 1
+		cpu.SetZN(operand)
+		cpu.Write(args.address, operand)
+	}
+}
+
+func (cpu *CPU) NOP(args InstructionArgs) {
+}
+
+func (cpu *CPU) ORA(args InstructionArgs) {
+	cpu.A |= cpu.Read(args.address)
+	cpu.SetZN(cpu.A)
+}
+
+func (cpu *CPU) PHA(args InstructionArgs) {
+	cpu.Push(cpu.A)
+}
+
+func (cpu *CPU) PHP(args InstructionArgs) {
+	cpu.Push(uint8(cpu.SR | StatusBreak | StatusUnused))
+}
+
+func (cpu *CPU) PLA(args InstructionArgs) {
+	cpu.A = cpu.Pop()
+	cpu.SetZN(cpu.A)
+}
+
+func (cpu *CPU) PLP(args InstructionArgs) {
+	cpu.SR = Status(cpu.Pop())
+	cpu.SetStatus(StatusUnused, true)
+}
+
+func (cpu *CPU) ROL(args InstructionArgs) {
+	
+}
