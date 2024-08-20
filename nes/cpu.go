@@ -40,7 +40,7 @@ const (
 	AddressingModeIndirectY                         // IZY 12
 )
 
-type InstructionArgs struct {
+type OperationArgs struct {
 	addrMode AddressingMode
 	address  uint16
 }
@@ -52,6 +52,8 @@ type CPU struct {
 	PC uint16 // Program counter register
 	SP uint8  // Statck pointer register
 	SR Status // Status register
+
+	cycles uint8
 
 	RAM [65536]uint8
 }
@@ -229,8 +231,27 @@ func (cpu *CPU) SetZN(value uint8) {
 	cpu.SetN(value)
 }
 
-func (cpu *CPU) Clock() {
+func (cpu *CPU) Clock() bool {
+	if cpu.cycles > 0 {
+		cpu.cycles--
+		return cpu.cycles == 0
+	}
 
+	opcode := cpu.Read(cpu.PC)
+
+	instruction := instructions[opcode]
+		
+	args := OperationArgs {
+		instruction.AddressingMode,
+		cpu.FetchOperandAddress(instruction.AddressingMode),
+	}
+
+	cpu.cycles = instruction.InstructionCycles - 1
+	cpu.PC += uint16(instruction.InstructionSize)
+
+	instruction.operation(cpu, args)
+
+	return false
 }
 
 func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
@@ -346,7 +367,7 @@ func (cpu *CPU) FetchOperandAddress(addrMode AddressingMode) uint16 {
 Add with carry
 *
 */
-func (cpu *CPU) ADC(args InstructionArgs) {
+func adc(cpu *CPU, args OperationArgs) {
 
 }
 
@@ -358,7 +379,7 @@ Logical And
 * Set negative status if resulting value's 7th bit is set
 *
 */
-func (cpu *CPU) ADD(args InstructionArgs) {
+func and(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 	cpu.A &= operand
 	cpu.SetZN(cpu.A)
@@ -377,7 +398,7 @@ on the accumulator and the other on a memory address depending on the
 addressing mode of instruction.
 *
 */
-func (cpu *CPU) ASL(args InstructionArgs) {
+func asl(cpu *CPU, args OperationArgs) {
 	if args.addrMode == AddressingModeAccumulator {
 		cpu.SetStatus(StatusCarry, cpu.A&0x80 != 0)
 		cpu.A <<= 1
@@ -398,7 +419,7 @@ Branch if Carry Clear
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BCC(args InstructionArgs) {
+func bcc(cpu *CPU, args OperationArgs) {
 	if !cpu.GetStatus(StatusCarry) {
 		cpu.PC = args.address
 	}
@@ -411,7 +432,7 @@ Branch if Carry Set
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BCS(args InstructionArgs) {
+func bcs(cpu *CPU, args OperationArgs) {
 	if cpu.GetStatus(StatusCarry) {
 		cpu.PC = args.address
 	}
@@ -424,7 +445,7 @@ Branch if Equal
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BEQ(args InstructionArgs) {
+func beq(cpu *CPU, args OperationArgs) {
 	if cpu.GetStatus(StatusZero) {
 		cpu.PC = args.address
 	}
@@ -440,7 +461,7 @@ the zero status flag based on the result of that operation.
 status flags respectively.
 *
 */
-func (cpu *CPU) BIT(args InstructionArgs) {
+func bit(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 
 	cpu.SetZ(cpu.A & operand)
@@ -455,7 +476,7 @@ Branch if Minus
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BMI(args InstructionArgs) {
+func bmi(cpu *CPU, args OperationArgs) {
 	if cpu.GetStatus(StatusNegative) {
 		cpu.PC = args.address
 	}
@@ -468,7 +489,7 @@ Branch if Not Equal
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BNE(args InstructionArgs) {
+func bne(cpu *CPU, args OperationArgs) {
 	if !cpu.GetStatus(StatusZero) {
 		cpu.PC = args.address
 	}
@@ -481,13 +502,13 @@ Branch if Positive
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BPL(args InstructionArgs) {
+func bpl(cpu *CPU, args OperationArgs) {
 	if !cpu.GetStatus(StatusNegative) {
 		cpu.PC = args.address
 	}
 }
 
-func (cpu *CPU) BRK(args InstructionArgs) {
+func brk(cpu *CPU, args OperationArgs) {
 	cpu.PushWord(cpu.PC)
 	cpu.Push(uint8(cpu.SR | StatusBreak | StatusUnused))
 	cpu.SetStatus(StatusInterrupt, true)
@@ -501,7 +522,7 @@ Branch if Overflow is Clear
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BVC(args InstructionArgs) {
+func bvc(cpu *CPU, args OperationArgs) {
 	if !cpu.GetStatus(StatusOverflow) {
 		cpu.PC = args.address
 	}
@@ -514,25 +535,25 @@ Branch if Overflow is Set
 register to the pre-calculated relative address in address argument.
 *
 */
-func (cpu *CPU) BVS(args InstructionArgs) {
+func bvs(cpu *CPU, args OperationArgs) {
 	if cpu.GetStatus(StatusOverflow) {
 		cpu.PC = args.address
 	}
 }
 
-func (cpu *CPU) CLC(args InstructionArgs) {
+func clc(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusCarry, false)
 }
 
-func (cpu *CPU) CLD(args InstructionArgs) {
+func cld(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusDecimal, false)
 }
 
-func (cpu *CPU) CLI(args InstructionArgs) {
+func cli(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusInterrupt, false)
 }
 
-func (cpu *CPU) CLV(args InstructionArgs) {
+func clv(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusOverflow, false)
 }
 
@@ -543,7 +564,7 @@ Compare
 * Sets zero bit of status register if accumulators's contents == operand
 * Sets negative bit of status register if accumulators's contents < operand
 **/
-func (cpu *CPU) CMP(args InstructionArgs) {
+func cmp(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 
 	cpu.SetStatus(StatusCarry, cpu.A >= operand)
@@ -557,7 +578,7 @@ Compare X Register
 * Sets zero bit of status register if X registers' contents == operand
 * Sets negative bit of status register if X registers' contents < operand
 **/
-func (cpu *CPU) CPX(args InstructionArgs) {
+func cpx(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 
 	cpu.SetStatus(StatusCarry, cpu.X >= operand)
@@ -571,73 +592,78 @@ Compare Y Register
 * Sets zero bit of status register if Y registers' contents == operand 
 * Sets negative bit of status register if Y registers' contents < operand
 **/
-func (cpu *CPU) CPY(args InstructionArgs) {
+func cpy(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 
 	cpu.SetStatus(StatusCarry, cpu.Y >= operand)
 	cpu.SetZN(cpu.Y - operand)
 }
 
-func (cpu *CPU) DEC(args InstructionArgs) {
+func dec(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address) - 1
 
 	cpu.Write(args.address, operand)
 	cpu.SetZN(operand)
 } 
 
-func (cpu *CPU) DEX(args InstructionArgs) {
+func dex(cpu *CPU, args OperationArgs) {
 	cpu.X--
 	cpu.SetZN(cpu.X)
 } 
 
-func (cpu *CPU) DEY(args InstructionArgs) {
+func dey(cpu *CPU, args OperationArgs) {
 	cpu.Y--
 	cpu.SetZN(cpu.Y)
 } 
 
-func (cpu *CPU) EOR(args InstructionArgs) {
+func eor(cpu *CPU, args OperationArgs) {
 	cpu.A ^= cpu.Read(args.address)
 	cpu.SetZN(cpu.A)
 }
 
-func (cpu *CPU) INC(args InstructionArgs) {
+func inc(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address) + 1
 
 	cpu.Write(args.address, operand)
 	cpu.SetZN(operand)
 }
 
-func (cpu *CPU) INX(args InstructionArgs) {
+func inx(cpu *CPU, args OperationArgs) {
 	cpu.X++
 	cpu.SetZN(cpu.X)
 }
 
-func (cpu *CPU) INY(args InstructionArgs) {
+func iny(cpu *CPU, args OperationArgs) {
 	cpu.Y++
 	cpu.SetZN(cpu.Y)
 }
 
-func (cpu *CPU) JMP(args InstructionArgs) {
+func jmp(cpu *CPU, args OperationArgs) {
 	cpu.PushWord(cpu.PC - 1)
 	cpu.PC = args.address
 }
 
-func (cpu *CPU) LDA(args InstructionArgs) {
+func jsr(cpu *CPU, args OperationArgs) {
+	cpu.PushWord(cpu.PC - 1)
+	cpu.PC = args.address
+}
+
+func lda(cpu *CPU, args OperationArgs) {
 	cpu.A = cpu.Read(args.address)
 	cpu.SetZN(cpu.A)
 }
 
-func (cpu *CPU) LDX(args InstructionArgs) {
+func ldx(cpu *CPU, args OperationArgs) {
 	cpu.X = cpu.Read(args.address)
 	cpu.SetZN(cpu.X)
 }
 
-func (cpu *CPU) LDY(args InstructionArgs) {
+func ldy(cpu *CPU, args OperationArgs) {
 	cpu.Y = cpu.Read(args.address)
 	cpu.SetZN(cpu.Y)
 }
 
-func (cpu *CPU) LSR(args InstructionArgs) {
+func lsr(cpu *CPU, args OperationArgs) {
 	if args.addrMode == AddressingModeAccumulator {
 		cpu.SetStatus(StatusCarry, cpu.A&0x0001 != 0)
 		cpu.A >>= 1
@@ -651,33 +677,33 @@ func (cpu *CPU) LSR(args InstructionArgs) {
 	}
 }
 
-func (cpu *CPU) NOP(args InstructionArgs) {
+func nop(cpu *CPU, args OperationArgs) {
 }
 
-func (cpu *CPU) ORA(args InstructionArgs) {
+func ora(cpu *CPU, args OperationArgs) {
 	cpu.A |= cpu.Read(args.address)
 	cpu.SetZN(cpu.A)
 }
 
-func (cpu *CPU) PHA(args InstructionArgs) {
+func pha(cpu *CPU, args OperationArgs) {
 	cpu.Push(cpu.A)
 }
 
-func (cpu *CPU) PHP(args InstructionArgs) {
+func php(cpu *CPU, args OperationArgs) {
 	cpu.Push(uint8(cpu.SR | StatusBreak | StatusUnused))
 }
 
-func (cpu *CPU) PLA(args InstructionArgs) {
+func pla(cpu *CPU, args OperationArgs) {
 	cpu.A = cpu.Pop()
 	cpu.SetZN(cpu.A)
 }
 
-func (cpu *CPU) PLP(args InstructionArgs) {
+func plp(cpu *CPU, args OperationArgs) {
 	cpu.SR = Status(cpu.Pop())
 	cpu.SetStatus(StatusUnused, true)
 }
 
-func (cpu *CPU) ROL(args InstructionArgs) {
+func rol(cpu *CPU, args OperationArgs) {
 	carryBit := Btou8(cpu.GetStatus(StatusCarry))
 
 	if args.addrMode == AddressingModeAccumulator {
@@ -693,7 +719,7 @@ func (cpu *CPU) ROL(args InstructionArgs) {
 	}
 }
 
-func (cpu *CPU) ROR(args InstructionArgs) {
+func ror(cpu *CPU, args OperationArgs) {
 	carryBit := Btou8(cpu.GetStatus(StatusCarry)) << 7
 
 	if args.addrMode == AddressingModeAccumulator {
@@ -709,7 +735,7 @@ func (cpu *CPU) ROR(args InstructionArgs) {
 	}
 }
 
-func (cpu *CPU) RTI(args InstructionArgs) {
+func rti(cpu *CPU, args OperationArgs) {
 	cpu.SR = Status(cpu.Pop())
 	cpu.SetStatus(StatusBreak, false)
 	cpu.SetStatus(StatusUnused, true)
@@ -717,66 +743,66 @@ func (cpu *CPU) RTI(args InstructionArgs) {
 	cpu.PC = cpu.PopWord()
 }
 
-func (cpu *CPU) RTS(args InstructionArgs) {
+func rts(cpu *CPU, args OperationArgs) {
 	cpu.PC = cpu.PopWord() + 1
 }
 
-func (cpu *CPU) SBC(args InstructionArgs) {
+func sbc(cpu *CPU, args OperationArgs) {
 }
 
-func (cpu *CPU) SEC(args InstructionArgs) {
+func sec(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusCarry, true)
 }
 
-func (cpu *CPU) SED(args InstructionArgs) {
+func sed(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusDecimal, true)
 }
 
-func (cpu *CPU) SEI(args InstructionArgs) {
+func sei(cpu *CPU, args OperationArgs) {
 	cpu.SetStatus(StatusInterrupt, true)
 }
 
-func (cpu *CPU) STA(args InstructionArgs) {
+func sta(cpu *CPU, args OperationArgs) {
 	cpu.Write(args.address, cpu.A)
 }
 
-func (cpu *CPU) STX(args InstructionArgs) {
+func stx(cpu *CPU, args OperationArgs) {
 	cpu.Write(args.address, cpu.X)
 }
 
-func (cpu *CPU) STY(args InstructionArgs) {
+func sty(cpu *CPU, args OperationArgs) {
 	cpu.Write(args.address, cpu.Y)
 }
 
-func (cpu *CPU) TAX(args InstructionArgs) {
+func tax(cpu *CPU, args OperationArgs) {
 	cpu.X = cpu.A 
 	cpu.SetZN(cpu.X)
 }
 
-func (cpu *CPU) TAY(args InstructionArgs) {
+func tay(cpu *CPU, args OperationArgs) {
 	cpu.Y = cpu.A 
 	cpu.SetZN(cpu.Y)
 }
 
-func (cpu *CPU) TSX(args InstructionArgs) {
+func tsx(cpu *CPU, args OperationArgs) {
 	cpu.X = cpu.SP
 	cpu.SetZN(cpu.Y)
 }
 
-func (cpu *CPU) TXA(args InstructionArgs) {
+func txa(cpu *CPU, args OperationArgs) {
 	cpu.A = cpu.X
 	cpu.SetZN(cpu.A)
 }
 
-func (cpu *CPU) TXS(args InstructionArgs) {
+func txs(cpu *CPU, args OperationArgs) {
 	cpu.SP = cpu.X
 }
 
-func (cpu *CPU) TYA(args InstructionArgs) {
+func tya(cpu *CPU, args OperationArgs) {
 	cpu.A = cpu.Y
 	cpu.SetZN(cpu.A)
 }
 
-func (cpu *CPU) XXX(args InstructionArgs) {
-
+func xxx(cpu *CPU, args OperationArgs) {
+	
 }
