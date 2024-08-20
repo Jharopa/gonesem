@@ -488,7 +488,10 @@ func (cpu *CPU) BPL(args InstructionArgs) {
 }
 
 func (cpu *CPU) BRK(args InstructionArgs) {
-
+	cpu.PushWord(cpu.PC)
+	cpu.Push(uint8(cpu.SR | StatusBreak | StatusUnused))
+	cpu.SetStatus(StatusInterrupt, true)
+	cpu.PC = cpu.ReadWord(0xFFFE)
 }
 
 /*
@@ -675,5 +678,105 @@ func (cpu *CPU) PLP(args InstructionArgs) {
 }
 
 func (cpu *CPU) ROL(args InstructionArgs) {
-	
+	carryBit := Btou8(cpu.GetStatus(StatusCarry))
+
+	if args.addrMode == AddressingModeAccumulator {
+		cpu.SetStatus(StatusCarry, cpu.A&0x80 != 0)
+		cpu.A = cpu.A << 1 | carryBit
+		cpu.SetZN(cpu.A)
+	} else {
+		operand := cpu.Read(args.address)
+		cpu.SetStatus(StatusCarry, operand&0x80 != 0)
+		operand = operand << 1 | carryBit
+		cpu.SetZN(operand)
+		cpu.Write(args.address, operand)
+	}
+}
+
+func (cpu *CPU) ROR(args InstructionArgs) {
+	carryBit := Btou8(cpu.GetStatus(StatusCarry)) << 7
+
+	if args.addrMode == AddressingModeAccumulator {
+		cpu.SetStatus(StatusCarry, cpu.A&0x0001 != 0)
+		cpu.A = cpu.A >> 1 | carryBit
+		cpu.SetZN(cpu.A)
+	} else {
+		operand := cpu.Read(args.address)
+		cpu.SetStatus(StatusCarry, operand&0x0001 != 0)
+		operand = operand >> 1 | carryBit
+		cpu.SetZN(operand)
+		cpu.Write(args.address, operand)
+	}
+}
+
+func (cpu *CPU) RTI(args InstructionArgs) {
+	cpu.SR = Status(cpu.Pop())
+	cpu.SetStatus(StatusBreak, false)
+	cpu.SetStatus(StatusUnused, true)
+
+	cpu.PC = cpu.PopWord()
+}
+
+func (cpu *CPU) RTS(args InstructionArgs) {
+	cpu.PC = cpu.PopWord() + 1
+}
+
+func (cpu *CPU) SBC(args InstructionArgs) {
+}
+
+func (cpu *CPU) SEC(args InstructionArgs) {
+	cpu.SetStatus(StatusCarry, true)
+}
+
+func (cpu *CPU) SED(args InstructionArgs) {
+	cpu.SetStatus(StatusDecimal, true)
+}
+
+func (cpu *CPU) SEI(args InstructionArgs) {
+	cpu.SetStatus(StatusInterrupt, true)
+}
+
+func (cpu *CPU) STA(args InstructionArgs) {
+	cpu.Write(args.address, cpu.A)
+}
+
+func (cpu *CPU) STX(args InstructionArgs) {
+	cpu.Write(args.address, cpu.X)
+}
+
+func (cpu *CPU) STY(args InstructionArgs) {
+	cpu.Write(args.address, cpu.Y)
+}
+
+func (cpu *CPU) TAX(args InstructionArgs) {
+	cpu.X = cpu.A 
+	cpu.SetZN(cpu.X)
+}
+
+func (cpu *CPU) TAY(args InstructionArgs) {
+	cpu.Y = cpu.A 
+	cpu.SetZN(cpu.Y)
+}
+
+func (cpu *CPU) TSX(args InstructionArgs) {
+	cpu.X = cpu.SP
+	cpu.SetZN(cpu.Y)
+}
+
+func (cpu *CPU) TXA(args InstructionArgs) {
+	cpu.A = cpu.X
+	cpu.SetZN(cpu.A)
+}
+
+func (cpu *CPU) TXS(args InstructionArgs) {
+	cpu.SP = cpu.X
+}
+
+func (cpu *CPU) TYA(args InstructionArgs) {
+	cpu.A = cpu.Y
+	cpu.SetZN(cpu.A)
+}
+
+func (cpu *CPU) XXX(args InstructionArgs) {
+
 }
