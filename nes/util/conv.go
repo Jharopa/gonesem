@@ -1,4 +1,4 @@
-package nes
+package util
 
 func Btou8(boolean bool) uint8 {
 	if boolean {

@@ -1,23 +1,18 @@
 package main
 
 import (
-	"gonesem/nes"
+	nes "gonesem/nes/cpu"
 )
 
 func main() {
 	cpu := nes.NewCPU()
 
-	cpu.PrintProcessorStatus()
+	cpu.PrintRegisters()
 
-	cpu.SetStatus(nes.StatusInterrupt, false)
+	complete := false
 
-	cpu.PrintProcessorStatus()
-
-	cpu.SetStatus(nes.StatusOverflow, true)
-
-	cpu.PrintProcessorStatus()
-
-	cpu.SetStatus(nes.StatusOverflow, false)
-
-	cpu.PrintProcessorStatus()
+	for !complete {
+		complete = cpu.Clock()
+		cpu.PrintRegisters()
+	}
 }

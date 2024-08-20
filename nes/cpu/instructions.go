@@ -1,7 +1,7 @@
-package nes
+package cpu
 
 type Instruction struct {
-	operation 		  func(*CPU, OperationArgs)
+	operation         func(*CPU, OperationArgs)
 	Mnemonic          string
 	AddressingMode    AddressingMode
 	InstructionSize   uint8
