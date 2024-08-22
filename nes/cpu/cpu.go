@@ -54,7 +54,7 @@ type CPU struct {
 	SP uint8  // Statck pointer register
 	SR Status // Status register
 
-	cycles uint8
+	cycles uint8 // Cycles remaining for current instruction execution
 
 	RAM [65536]uint8
 }
@@ -210,13 +210,16 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) uint16 {
 	}
 }
 
+func (cpu *CPU) PrintCPUState() {
+	cpu.PrintRegisters()
+	cpu.PrintProcessorStatus()
+}
+
 func (cpu *CPU) PrintRegisters() {
 	fmt.Printf(
 		"Accumulator register: %d\nIndex register X: %d\nIndex register Y: %d\nProgram counter: 0x%04X\nStack pointer: 0x%02X\n",
 		cpu.A, cpu.X, cpu.Y, cpu.PC, cpu.SP,
 	)
-
-	cpu.PrintProcessorStatus()
 }
 
 func (cpu *CPU) PrintProcessorStatus() {
@@ -371,7 +374,18 @@ Add with carry
 *
 */
 func adc(cpu *CPU, args OperationArgs) {
+	operand := uint16(cpu.Read(args.address))
+	carryBit := uint16(util.Btou8(cpu.getStatus(StatusCarry)))
 
+	result := uint16(cpu.A) + operand + carryBit
+
+	overflowed := ((uint16(cpu.A) ^ result) & ^(uint16(cpu.A) ^ operand) & 0x0080) != 0
+
+	cpu.setStatus(StatusOverflow, overflowed)
+	cpu.setStatus(StatusCarry, result > 255)
+	cpu.setZN(uint8(result))
+
+	cpu.A = uint8(result)
 }
 
 /*
@@ -383,8 +397,7 @@ Logical And
 *
 */
 func and(cpu *CPU, args OperationArgs) {
-	operand := cpu.Read(args.address)
-	cpu.A &= operand
+	cpu.A = cpu.Read(args.address)
 	cpu.setZN(cpu.A)
 }
 
@@ -757,6 +770,18 @@ func rts(cpu *CPU, args OperationArgs) {
 }
 
 func sbc(cpu *CPU, args OperationArgs) {
+	operand := uint16(cpu.Read(args.address)) ^ 0x00FF
+	carryBit := uint16(util.Btou8(cpu.getStatus(StatusCarry)))
+
+	result := uint16(cpu.A) + operand + carryBit
+
+	overflowed := ((uint16(cpu.A) ^ result) & ^(uint16(cpu.A) ^ operand) & 0x0080) != 0
+
+	cpu.setStatus(StatusOverflow, overflowed)
+	cpu.setStatus(StatusCarry, result > 255)
+	cpu.setZN(uint8(result))
+
+	cpu.A = uint8(result)
 }
 
 func sec(cpu *CPU, args OperationArgs) {
@@ -814,4 +839,23 @@ func tya(cpu *CPU, args OperationArgs) {
 
 func xxx(cpu *CPU, args OperationArgs) {
 
+}
+
+// ----------------- //
+// Unoffical Opcodes //
+// ----------------- //
+
+/**
+Load Accumulator Logical Shift Right
+* Performs equvilant of a LDA followed by an LSR
+**/
+func alr(cpu *CPU, args OperationArgs) {
+	cpu.A = cpu.Read(args.address)
+	cpu.setStatus(StatusCarry, cpu.A&0x0001 != 0)
+	cpu.A >>= 1
+	cpu.setZN(cpu.A)
+}
+
+func anc(cpu *CPU, arg OperationArgs) {
+	
 }
