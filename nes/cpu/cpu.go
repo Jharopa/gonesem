@@ -845,12 +845,14 @@ func xxx(cpu *CPU, args OperationArgs) {
 // Unoffical Opcodes //
 // ----------------- //
 
-/**
+/*
+*
 Load Accumulator and Logical Shift Right
-* Performs equvilant of a immediate mode LDA 
+* Performs equvilant of a immediate mode LDA
 * Then performs equvilant of LSR on accumulator
 * Sets Zero and Negative bits in status registers based on result
-**/
+*
+*/
 func alr(cpu *CPU, args OperationArgs) {
 	cpu.A = cpu.Read(args.address)
 	cpu.setStatus(StatusCarry, cpu.A&0x0001 != 0)
@@ -858,35 +860,39 @@ func alr(cpu *CPU, args OperationArgs) {
 	cpu.setZN(cpu.A)
 }
 
-/**
+/*
+*
 AND with Accumulator and Copy N to C
 * Performs the equivilant of immediate mode AND
 * Sets Zero and Negative bits in status registers based on result
 * Copys Negative status bit to Carry status bit
-**/
+*
+*/
 func anc(cpu *CPU, arg OperationArgs) {
 	cpu.A &= cpu.Read(arg.address)
 	cpu.setZN(cpu.A)
 	cpu.setStatus(StatusCarry, cpu.getStatus(StatusNegative))
 }
 
-/**
+/*
+*
 AND with Accumulator and Rotate Right
 * Performs the equivilant of immediate mode AND
 * Performs the equivilant of a ROR on the accumulator
 * Sets Zero and Negative bits in status registers based on result
-* Sets Carry bit in status register based on the results 6th bit 
+* Sets Carry bit in status register based on the results 6th bit
 * Sets Overflow bit in status register based on the results 6th bit xor with 5th bit
-**/
+*
+*/
 func arr(cpu *CPU, args OperationArgs) {
 	cpu.A &= cpu.Read(args.address)
-	cpu.A = cpu.A >> 1 | cpu.A&0x0001 << 7
+	cpu.A = cpu.A>>1 | cpu.A&0x0001<<7
 	cpu.setZN(cpu.A)
 
 	carryBit := cpu.A&0x20 != 0
 	cpu.setStatus(StatusCarry, carryBit)
 
-	overflowBit := ((cpu.A&0x20 >> 5) ^  (cpu.A&0x10 >> 4)) != 0
+	overflowBit := ((cpu.A & 0x20 >> 5) ^ (cpu.A & 0x10 >> 4)) != 0
 	cpu.setStatus(StatusOverflow, overflowBit)
 }
 
@@ -895,7 +901,7 @@ func axs(cpu *CPU, args OperationArgs) {
 	cpu.X &= cpu.A
 	result := uint16(cpu.X) - operand
 
-	carryBit := result & 0xFF00 != 0
+	carryBit := result&0xFF00 != 0
 	cpu.setStatus(StatusCarry, carryBit)
 	cpu.setZN(uint8(result))
 
@@ -909,7 +915,7 @@ func lax(cpu *CPU, args OperationArgs) {
 }
 
 func sax(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.A & cpu.X)
+	cpu.Write(args.address, cpu.A&cpu.X)
 }
 
 func dcp(cpu *CPU, args OperationArgs) {
@@ -939,7 +945,56 @@ func isc(cpu *CPU, args OperationArgs) {
 }
 
 func rla(cpu *CPU, args OperationArgs) {
+	carryBit := util.Btou8(cpu.getStatus(StatusCarry))
+	operand := cpu.Read(args.address)
+
+	cpu.setStatus(StatusCarry, operand&0x80 != 0)
+	operand = operand<<1 | carryBit
+	cpu.Write(args.address, operand)
+
+	cpu.A &= operand
+	cpu.setZN(cpu.A)
 }
 
 func rra(cpu *CPU, args OperationArgs) {
+	carryBit := util.Btou8(cpu.getStatus(StatusCarry))
+	operand := cpu.Read(args.address)
+
+	cpu.setStatus(StatusCarry, operand&0x01 != 0)
+	operand = operand>>1 | carryBit<<7
+	cpu.Write(args.address, operand)
+
+	result := uint16(cpu.A) + uint16(operand) + uint16(util.Btou8(cpu.getStatus(StatusCarry)))
+
+	overflowed := ((uint16(cpu.A) ^ result) & ^(uint16(cpu.A) ^ uint16(operand)) & 0x0080) != 0
+
+	cpu.setStatus(StatusOverflow, overflowed)
+	cpu.setStatus(StatusCarry, result > 255)
+	cpu.setZN(uint8(result))
+
+	cpu.A = uint8(result)
+}
+
+func slo(cpu *CPU, args OperationArgs) {
+	operand := cpu.Read(args.address)
+
+	cpu.setStatus(StatusCarry, operand&0x80 != 0)
+	operand <<= 1
+
+	cpu.Write(args.address, operand)
+
+	cpu.A |= operand
+	cpu.setZN(cpu.A)
+}
+
+func sre(cpu *CPU, args OperationArgs) {
+	operand := cpu.Read(args.address)
+
+	cpu.setStatus(StatusCarry, operand&0x80 != 0)
+	operand <<= 1
+
+	cpu.Write(args.address, operand)
+
+	cpu.A ^= operand
+	cpu.setZN(cpu.A)
 }
