@@ -82,7 +82,7 @@ func (cpu *CPU) Reset() {
 func (cpu *CPU) Clock() bool {
 	if cpu.cycles > 0 {
 		cpu.cycles--
-		return cpu.cycles == 0
+		return cpu.cycles <= 0
 	}
 
 	opcode := cpu.Read(cpu.PC)
@@ -845,6 +845,10 @@ func xxx(cpu *CPU, args OperationArgs) {
 // Unoffical Opcodes //
 // ----------------- //
 
+func ahx(cpu *CPU, args OperationArgs) {
+	cpu.Write(args.address, cpu.A & cpu.X & (uint8(args.address >> 8) + 1))
+}
+
 /*
 *
 Load Accumulator and Logical Shift Right
@@ -912,6 +916,12 @@ func lax(cpu *CPU, args OperationArgs) {
 	cpu.A = cpu.Read(args.address)
 	cpu.X = cpu.A
 	cpu.setZN(cpu.A)
+}
+
+func las(cpu *CPU, args OperationArgs) {
+	cpu.SP &= cpu.Read(args.address)
+	cpu.A = cpu.SP
+	cpu.X = cpu.SP
 }
 
 func sax(cpu *CPU, args OperationArgs) {
@@ -997,4 +1007,12 @@ func sre(cpu *CPU, args OperationArgs) {
 
 	cpu.A ^= operand
 	cpu.setZN(cpu.A)
+}
+
+func shx(cpu *CPU, args OperationArgs) {
+	cpu.Write(args.address, cpu.X & (uint8(args.address >> 8) + 1))
+}
+
+func shy(cpu *CPU, args OperationArgs) {
+	cpu.Write(args.address, cpu.Y & (uint8(args.address >> 8) + 1))
 }

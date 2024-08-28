@@ -11,258 +11,258 @@ type Instruction struct {
 var instructions = [256]Instruction{
 	{brk, "BRK", AddressingModeImplied, 1, 7},     // 0x00
 	{ora, "ORA", AddressingModeIndirectX, 2, 6},   // 0x01
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x02
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x03
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x04
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x02
+	{slo, "SLO", AddressingModeIndirectX, 2, 8},   // 0x03
+	{nop, "NOP", AddressingModeZeroPage, 2, 3},    // 0x04
 	{ora, "ORA", AddressingModeZeroPage, 2, 3},    // 0x05
 	{asl, "ASL", AddressingModeZeroPage, 2, 5},    // 0x06
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x07
+	{slo, "SLO", AddressingModeZeroPage, 2, 5},    // 0x07
 	{php, "PHP", AddressingModeImplied, 1, 3},     // 0x08
 	{ora, "ORA", AddressingModeImmediate, 2, 2},   // 0x09
 	{asl, "ASL", AddressingModeAccumulator, 1, 2}, // 0x0A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x0B
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x0C
+	{anc, "ANC", AddressingModeImmediate, 2, 2},   // 0x0B
+	{nop, "NOP", AddressingModeAbsolute, 3, 4},    // 0x0C
 	{ora, "ORA", AddressingModeAbsolute, 3, 4},    // 0x0D
 	{asl, "ASL", AddressingModeAbsolute, 3, 6},    // 0x0E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x0F
+	{slo, "SLO", AddressingModeAbsolute, 3, 6},    // 0x0F
 	{bpl, "BPL", AddressingModeRelative, 2, 2},    // 0x10
 	{ora, "ORA", AddressingModeIndirectY, 2, 5},   // 0x11
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x12
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x13
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x14
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x12
+	{slo, "SLO", AddressingModeIndirectY, 2, 8},   // 0x13
+	{nop, "NOP", AddressingModeZeroPageX, 2, 4},   // 0x14
 	{ora, "ORA", AddressingModeZeroPageX, 2, 4},   // 0x15
 	{asl, "ASL", AddressingModeZeroPageX, 2, 6},   // 0x16
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x17
+	{slo, "SLO", AddressingModeZeroPageX, 2, 6},   // 0x17
 	{clc, "CLC", AddressingModeImplied, 1, 2},     // 0x18
 	{ora, "ORA", AddressingModeAbsoluteY, 3, 4},   // 0x19
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x1A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x1B
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x1C
+	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0x1A
+	{slo, "SLO", AddressingModeAbsoluteY, 3, 7},   // 0x1B
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0x1C +1 cycle if page crossed
 	{ora, "ORA", AddressingModeAbsoluteX, 3, 4},   // 0x1D
 	{asl, "ASL", AddressingModeAbsoluteX, 3, 7},   // 0x1E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x1F
+	{slo, "SLO", AddressingModeAbsoluteX, 3, 7},   // 0x1F
 	{jsr, "JSR", AddressingModeAbsolute, 3, 6},    // 0x20
 	{and, "AND", AddressingModeIndirectX, 2, 6},   // 0x21
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x22
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x23
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x22
+	{rla, "RLA", AddressingModeIndirectX, 2, 8},   // 0x23
 	{bit, "BIT", AddressingModeZeroPage, 2, 3},    // 0x24
 	{and, "AND", AddressingModeZeroPage, 2, 3},    // 0x25
 	{rol, "ROL", AddressingModeZeroPage, 2, 5},    // 0x26
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x27
+	{rla, "RLA", AddressingModeZeroPage, 2, 5},    // 0x27
 	{plp, "PLP", AddressingModeImplied, 1, 4},     // 0x28
 	{and, "AND", AddressingModeImmediate, 2, 2},   // 0x29
 	{rol, "ROL", AddressingModeAccumulator, 1, 2}, // 0x2A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x2B
+	{anc, "ANC", AddressingModeImmediate, 2, 2},   // 0x2B
 	{bit, "BIT", AddressingModeAbsolute, 3, 4},    // 0x2C
 	{and, "AND", AddressingModeAbsolute, 3, 4},    // 0x2D
 	{rol, "ROL", AddressingModeAbsolute, 3, 6},    // 0x2E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x2F
+	{rla, "RLA", AddressingModeAbsolute, 3, 6},    // 0x2F
 	{bmi, "BMI", AddressingModeRelative, 2, 2},    // 0x30
 	{and, "AND", AddressingModeIndirectY, 2, 5},   // 0x31
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x32
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x33
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x34
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x32
+	{rla, "RLA", AddressingModeIndirectY, 2, 8},   // 0x33
+	{nop, "NOP", AddressingModeZeroPageX, 2, 4},   // 0x34
 	{and, "AND", AddressingModeZeroPageX, 2, 4},   // 0x35
 	{rol, "ROL", AddressingModeZeroPageX, 2, 6},   // 0x36
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x37
+	{rla, "RLA", AddressingModeZeroPageX, 2, 6},   // 0x37
 	{sec, "SEC", AddressingModeImplied, 1, 2},     // 0x38
 	{and, "AND", AddressingModeAbsoluteY, 3, 4},   // 0x39
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x3A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x3B
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x3C
+	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0x3A
+	{rla, "RLA", AddressingModeAbsoluteY, 3, 7},   // 0x3B
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0x3C +1 cycle if page crossed
 	{and, "AND", AddressingModeAbsoluteX, 3, 4},   // 0x3D
 	{rol, "ROL", AddressingModeAbsoluteX, 3, 7},   // 0x3E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x3F
+	{rla, "RLA", AddressingModeAbsoluteX, 3, 7},   // 0x3F
 	{rti, "RTI", AddressingModeImplied, 1, 6},     // 0x40
 	{eor, "EOR", AddressingModeIndirectX, 2, 6},   // 0x41
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x42
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x43
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x44
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x42
+	{sre, "SRE", AddressingModeIndirectX, 2, 8},   // 0x43
+	{nop, "NOP", AddressingModeImplied, 2, 3},     // 0x44
 	{eor, "EOR", AddressingModeZeroPage, 2, 3},    // 0x45
 	{lsr, "LSR", AddressingModeZeroPage, 2, 5},    // 0x46
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x47
+	{sre, "SRE", AddressingModeZeroPage, 2, 5},    // 0x47
 	{pha, "PHA", AddressingModeImplied, 1, 3},     // 0x48
 	{eor, "EOR", AddressingModeImmediate, 2, 2},   // 0x49
 	{lsr, "LSR", AddressingModeAccumulator, 1, 2}, // 0x4A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x4B
+	{alr, "ALR", AddressingModeImmediate, 2, 2},   // 0x4B
 	{jmp, "JMP", AddressingModeAbsolute, 3, 3},    // 0x4C
 	{eor, "EOR", AddressingModeAbsolute, 3, 4},    // 0x4D
 	{lsr, "LSR", AddressingModeAbsolute, 3, 6},    // 0x4E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x4F
+	{sre, "SRE", AddressingModeAbsolute, 3, 6},    // 0x4F
 	{bvc, "BVC", AddressingModeRelative, 2, 2},    // 0x50
 	{eor, "EOR", AddressingModeIndirectY, 2, 5},   // 0x51
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x52
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x53
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x54
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x52
+	{sre, "SRE", AddressingModeIndirectY, 2, 8},   // 0x53
+	{nop, "NOP", AddressingModeZeroPageX, 2, 4},   // 0x54
 	{eor, "EOR", AddressingModeZeroPageX, 2, 4},   // 0x55
 	{lsr, "LSR", AddressingModeZeroPageX, 2, 6},   // 0x56
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x57
+	{sre, "SRE", AddressingModeZeroPageX, 2, 6},   // 0x57
 	{cli, "CLI", AddressingModeImplied, 1, 2},     // 0x58
 	{eor, "EOR", AddressingModeAbsoluteY, 3, 4},   // 0x59
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x5A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x5B
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x5C
+	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0x5A
+	{sre, "SRE", AddressingModeAbsoluteY, 3, 7},   // 0x5B
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0x5C +1 cycle if page crossed
 	{eor, "EOR", AddressingModeAbsoluteX, 3, 4},   // 0x5D
 	{lsr, "LSR", AddressingModeAbsoluteX, 3, 7},   // 0x5E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x5F
+	{sre, "SRE", AddressingModeAbsoluteX, 3, 7},   // 0x5F
 	{rts, "RTS", AddressingModeImplied, 1, 6},     // 0x60
 	{adc, "ADC", AddressingModeIndirectX, 2, 6},   // 0x61
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x62
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x63
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x64
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x62
+	{rra, "RRA", AddressingModeIndirectX, 2, 8},   // 0x63
+	{nop, "NOP", AddressingModeZeroPage, 2, 3},    // 0x64
 	{adc, "ADC", AddressingModeZeroPage, 2, 3},    // 0x65
 	{ror, "ROR", AddressingModeZeroPage, 2, 5},    // 0x66
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x67
+	{rra, "RRA", AddressingModeZeroPage, 2, 5},    // 0x67
 	{pla, "PLA", AddressingModeImplied, 1, 4},     // 0x68
 	{adc, "ADC", AddressingModeImmediate, 2, 2},   // 0x69
 	{ror, "ROR", AddressingModeAccumulator, 1, 2}, // 0x6A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x6B
+	{arr, "ARR", AddressingModeImmediate, 2, 2},   // 0x6B
 	{jmp, "JMP", AddressingModeIndirect, 3, 5},    // 0x6C
 	{adc, "ADC", AddressingModeAbsolute, 3, 4},    // 0x6D
 	{ror, "ROR", AddressingModeAbsolute, 3, 6},    // 0x6E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x6F
+	{rra, "RRA", AddressingModeAbsolute, 3, 6},    // 0x6F
 	{bvs, "BVS", AddressingModeRelative, 2, 2},    // 0x70
 	{adc, "ADC", AddressingModeIndirectY, 2, 5},   // 0x71
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x72
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x73
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x74
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x72
+	{rra, "RRA", AddressingModeIndirectY, 2, 8},   // 0x73
+	{nop, "NOP", AddressingModeZeroPageX, 2, 4},   // 0x74
 	{adc, "ADC", AddressingModeZeroPageX, 2, 4},   // 0x75
 	{ror, "ROR", AddressingModeZeroPageX, 2, 6},   // 0x76
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x77
+	{rra, "RRA", AddressingModeZeroPageX, 2, 6},   // 0x77
 	{sei, "SEI", AddressingModeImplied, 1, 2},     // 0x78
 	{adc, "ADC", AddressingModeAbsoluteY, 3, 4},   // 0x79
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x7A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x7B
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x7C
+	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0x7A
+	{rra, "RRA", AddressingModeAbsoluteY, 3, 7},   // 0x7B
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0x7C
 	{adc, "ADC", AddressingModeAbsoluteX, 3, 4},   // 0x7D
 	{ror, "ROR", AddressingModeAbsoluteX, 3, 7},   // 0x7E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x7F
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x80
+	{rra, "RRA", AddressingModeAbsoluteX, 3, 7},   // 0x7F
+	{nop, "NOP", AddressingModeImmediate, 2, 2},   // 0x80
 	{sta, "STA", AddressingModeIndirectX, 2, 6},   // 0x81
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x82
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x83
+	{nop, "NOP", AddressingModeImmediate, 2, 2},   // 0x82
+	{sax, "SAX", AddressingModeIndirectX, 2, 6},   // 0x83
 	{sty, "STY", AddressingModeZeroPage, 2, 3},    // 0x84
 	{sta, "STA", AddressingModeZeroPage, 2, 3},    // 0x85
 	{stx, "STX", AddressingModeZeroPage, 2, 3},    // 0x86
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x87
+	{sax, "SAX", AddressingModeZeroPage, 2, 3},    // 0x87
 	{dey, "DEY", AddressingModeImplied, 1, 2},     // 0x88
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x89
+	{nop, "NOP", AddressingModeImmediate, 2, 2},   // 0x89
 	{txa, "TXA", AddressingModeImplied, 1, 2},     // 0x8A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x8B
+	{xxx, "XAA", AddressingModeImplied, 0, 0},     // 0x8B X
 	{sty, "STY", AddressingModeAbsolute, 3, 4},    // 0x8C
 	{sta, "STA", AddressingModeAbsolute, 3, 4},    // 0x8D
 	{stx, "STX", AddressingModeAbsolute, 3, 4},    // 0x8E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x8F
+	{sax, "SAX", AddressingModeAbsolute, 3, 4},    // 0x8F
 	{bcc, "BCC", AddressingModeRelative, 2, 2},    // 0x90
 	{sta, "STA", AddressingModeIndirectY, 2, 6},   // 0x91
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x92
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x93
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x92
+	{ahx, "AHX", AddressingModeIndirectY, 2, 6},   // 0x93
 	{sty, "STY", AddressingModeZeroPageX, 2, 4},   // 0x94
 	{sta, "STA", AddressingModeZeroPageX, 2, 4},   // 0x95
 	{stx, "STX", AddressingModeZeroPageY, 2, 4},   // 0x96
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x97
+	{sax, "SAX", AddressingModeZeroPageY, 2, 4},   // 0x97
 	{tya, "TYA", AddressingModeImplied, 1, 2},     // 0x98
 	{sta, "STA", AddressingModeAbsoluteY, 3, 5},   // 0x99
 	{txs, "TXS", AddressingModeImplied, 1, 2},     // 0x9A
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x9B
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x9C
+	{xxx, "TAS", AddressingModeAbsoluteY, 3, 5},   // 0x9B X
+	{shy, "SHY", AddressingModeAbsoluteX, 3, 5},   // 0x9C
 	{sta, "STA", AddressingModeAbsoluteX, 3, 5},   // 0x9D
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x9E
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0x9F
+	{shx, "SHX", AddressingModeAbsoluteY, 3, 5},   // 0x9E
+	{ahx, "AHX", AddressingModeAbsoluteY, 3, 5},   // 0x9F
 	{ldy, "LDY", AddressingModeImmediate, 2, 2},   // 0xA0
 	{lda, "LDA", AddressingModeIndirectX, 2, 6},   // 0xA1
 	{ldx, "LDX", AddressingModeImmediate, 2, 2},   // 0xA2
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xA3
+	{lax, "LAX", AddressingModeIndirectX, 2, 6},   // 0xA3
 	{ldy, "LDY", AddressingModeZeroPage, 2, 3},    // 0xA4
 	{lda, "LDA", AddressingModeZeroPage, 2, 3},    // 0xA5
 	{ldx, "LDX", AddressingModeZeroPage, 2, 3},    // 0xA6
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xA7
+	{lax, "LAX", AddressingModeZeroPage, 2, 3},    // 0xA7
 	{tay, "TAY", AddressingModeImplied, 1, 2},     // 0xA8
 	{lda, "LDA", AddressingModeImmediate, 2, 2},   // 0xA9
 	{tax, "TAX", AddressingModeImplied, 1, 2},     // 0xAA
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xAB
+	{xxx, "LXA", AddressingModeImmediate, 2, 2},   // 0xAB X
 	{ldy, "LDY", AddressingModeAbsolute, 3, 4},    // 0xAC
 	{lda, "LDA", AddressingModeAbsolute, 3, 4},    // 0xAD
 	{ldx, "LDX", AddressingModeAbsolute, 3, 4},    // 0xAE
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xAF
+	{lax, "LAX", AddressingModeAbsolute, 3, 4},    // 0xAF
 	{bcs, "BCS", AddressingModeRelative, 2, 2},    // 0xB0
 	{lda, "LDA", AddressingModeIndirectY, 2, 5},   // 0xB1
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xB2
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xB3
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0xB2
+	{lax, "LAX", AddressingModeIndirectY, 2, 5},   // 0xB3 +1 cycle if page crossed
 	{ldy, "LDY", AddressingModeZeroPageX, 2, 4},   // 0xB4
 	{lda, "LDA", AddressingModeZeroPageX, 2, 4},   // 0xB5
 	{ldx, "LDX", AddressingModeZeroPageY, 2, 4},   // 0xB6
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xB7
+	{lax, "LAX", AddressingModeZeroPageY, 2, 4},   // 0xB7
 	{clv, "CLV", AddressingModeImplied, 1, 2},     // 0xB8
 	{lda, "LDA", AddressingModeAbsoluteY, 3, 4},   // 0xB9
 	{tsx, "TSX", AddressingModeImplied, 1, 2},     // 0xBA
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xBB
+	{las, "LAS", AddressingModeAbsoluteY, 3, 4},   // 0xBB +1 cycle if page crossed
 	{ldy, "LDY", AddressingModeAbsoluteX, 3, 4},   // 0xBC
 	{lda, "LDA", AddressingModeAbsoluteX, 3, 4},   // 0xBD
 	{ldx, "LDX", AddressingModeAbsoluteY, 3, 4},   // 0xBE
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xBF
+	{lax, "LAX", AddressingModeAbsoluteY, 3, 4},   // 0xBF +1 cycle if page crossed
 	{cpy, "CPY", AddressingModeImmediate, 2, 2},   // 0xC0
 	{cmp, "CMP", AddressingModeIndirectX, 2, 6},   // 0xC1
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xC2
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xC3
+	{nop, "NOP", AddressingModeImmediate, 2, 2},   // 0xC2
+	{dcp, "DCP", AddressingModeIndirectX, 2, 8},   // 0xC3
 	{cpy, "CPY", AddressingModeZeroPage, 2, 3},    // 0xC4
 	{cmp, "CMP", AddressingModeZeroPage, 2, 3},    // 0xC5
 	{dec, "DEC", AddressingModeZeroPage, 2, 5},    // 0xC6
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xC7
+	{dcp, "DCP", AddressingModeZeroPage, 2, 5},    // 0xC7
 	{iny, "INY", AddressingModeImplied, 1, 2},     // 0xC8
 	{cmp, "CMP", AddressingModeImmediate, 2, 2},   // 0xC9
 	{dex, "DEX", AddressingModeImplied, 1, 2},     // 0xCA
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xCB
+	{axs, "AXS", AddressingModeImmediate, 2, 2},   // 0xCB
 	{cpy, "CPY", AddressingModeAbsolute, 3, 4},    // 0xCC
 	{cmp, "CMP", AddressingModeAbsolute, 3, 4},    // 0xCD
 	{dec, "DEC", AddressingModeAbsolute, 3, 6},    // 0xCE
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xCF
+	{dcp, "DCP", AddressingModeAbsolute, 3, 6},    // 0xCF
 	{bne, "BNE", AddressingModeRelative, 2, 2},    // 0xD0
 	{cmp, "CMP", AddressingModeIndirectY, 2, 5},   // 0xD1
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xD2
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xD3
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xD4
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0xD2
+	{dcp, "DCP", AddressingModeIndirectY, 2, 8},   // 0xD3
+	{nop, "NOP", AddressingModeZeroPageX, 2, 4},   // 0xD4
 	{cmp, "CMP", AddressingModeZeroPageX, 2, 4},   // 0xD5
 	{dec, "DEC", AddressingModeZeroPageX, 2, 6},   // 0xD6
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xD7
+	{dcp, "DCP", AddressingModeZeroPageX, 2, 6},   // 0xD7
 	{cld, "CLD", AddressingModeImplied, 1, 2},     // 0xD8
 	{cmp, "CMP", AddressingModeAbsoluteY, 3, 4},   // 0xD9
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xDA
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xDB
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xDC
+	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0xDA
+	{dcp, "DCP", AddressingModeAbsoluteY, 3, 7},   // 0xDB
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0xDC +1 cycle if page crossed
 	{cmp, "CMP", AddressingModeAbsoluteX, 3, 4},   // 0xDD
 	{dec, "DEC", AddressingModeAbsoluteX, 3, 7},   // 0xDE
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xDF
+	{dcp, "DCP", AddressingModeAbsoluteX, 3, 7},   // 0xDF
 	{cpx, "CPX", AddressingModeImmediate, 2, 2},   // 0xE0
 	{sbc, "SBC", AddressingModeIndirectX, 2, 6},   // 0xE1
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xE2
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xE3
+	{nop, "NOP", AddressingModeImmediate, 2, 2},   // 0xE2
+	{isc, "ISC", AddressingModeIndirectX, 2, 8},   // 0xE3
 	{cpx, "CPX", AddressingModeZeroPage, 2, 3},    // 0xE4
 	{sbc, "SBC", AddressingModeZeroPage, 2, 3},    // 0xE5
 	{inc, "INC", AddressingModeZeroPage, 2, 5},    // 0xE6
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xE7
+	{isc, "ISC", AddressingModeZeroPage, 2, 5},    // 0xE7
 	{inx, "INX", AddressingModeImplied, 1, 2},     // 0xE8
 	{sbc, "SBC", AddressingModeImmediate, 2, 2},   // 0xE9
 	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0xEA
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xEB
+	{sbc, "SBC", AddressingModeImmediate, 2, 2},   // 0xEB
 	{cpx, "CPX", AddressingModeAbsolute, 3, 4},    // 0xEC
 	{sbc, "SBC", AddressingModeAbsolute, 3, 4},    // 0xED
 	{inc, "INC", AddressingModeAbsolute, 3, 6},    // 0xEE
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xEF
+	{isc, "ISC", AddressingModeAbsolute, 3, 6},    // 0xEF
 	{beq, "BEQ", AddressingModeRelative, 2, 2},    // 0xF0
 	{sbc, "SBC", AddressingModeIndirectY, 2, 5},   // 0xF1
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xF2
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xF3
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xF4
+	{nop, "STP", AddressingModeImplied, 1, 0},     // 0xF2
+	{isc, "ISC", AddressingModeIndirectY, 2, 8},   // 0xF3
+	{nop, "NOP", AddressingModeZeroPageX, 2, 4},   // 0xF4
 	{sbc, "SBC", AddressingModeZeroPageX, 2, 4},   // 0xF5
 	{inc, "INC", AddressingModeZeroPageX, 2, 6},   // 0xF6
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xF7
+	{isc, "ISC", AddressingModeZeroPageX, 2, 6},   // 0xF7
 	{sed, "SED", AddressingModeImplied, 1, 2},     // 0xF8
 	{sbc, "SBC", AddressingModeAbsoluteY, 3, 4},   // 0xF9
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xFA
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xFB
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xFC
+	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0xFA
+	{isc, "ISC", AddressingModeAbsoluteY, 3, 7},   // 0xFB
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0xFC +1 cycle if page crossed
 	{sbc, "SBC", AddressingModeAbsoluteX, 3, 4},   // 0xFD
 	{inc, "INC", AddressingModeAbsoluteX, 3, 7},   // 0xFE
-	{xxx, "???", AddressingModeImplied, 0, 0},     // 0xFF
+	{isc, "ISC", AddressingModeAbsoluteX, 3, 7},   // 0xFF
 }
