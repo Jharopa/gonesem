@@ -661,7 +661,6 @@ func iny(cpu *CPU, args OperationArgs) {
 }
 
 func jmp(cpu *CPU, args OperationArgs) {
-	cpu.pushWord(cpu.PC - 1)
 	cpu.PC = args.address
 }
 
@@ -846,7 +845,7 @@ func xxx(cpu *CPU, args OperationArgs) {
 // ----------------- //
 
 func ahx(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.A & cpu.X & (uint8(args.address >> 8) + 1))
+	cpu.Write(args.address, cpu.A&cpu.X&(uint8(args.address>>8)+1))
 }
 
 /*
@@ -1010,9 +1009,9 @@ func sre(cpu *CPU, args OperationArgs) {
 }
 
 func shx(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.X & (uint8(args.address >> 8) + 1))
+	cpu.Write(args.address, cpu.X&(uint8(args.address>>8)+1))
 }
 
 func shy(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.Y & (uint8(args.address >> 8) + 1))
+	cpu.Write(args.address, cpu.Y&(uint8(args.address>>8)+1))
 }
