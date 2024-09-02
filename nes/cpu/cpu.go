@@ -98,13 +98,13 @@ func (cpu *CPU) Clock() bool {
 		address,
 	}
 
-	cpu.cycles = instruction.InstructionCycles
+	cpu.cycles = instruction.Cycles
 
 	if pageCrosed {
-		cpu.cycles += instruction.AdditionalInstructionCycles
+		cpu.cycles += instruction.AdditionalCycles
 	}
 
-	cpu.PC += uint16(instruction.InstructionSize)
+	cpu.PC += uint16(instruction.Size)
 
 	instruction.operation(cpu, args)
 

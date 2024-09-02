@@ -1,12 +1,12 @@
 package cpu
 
 type Instruction struct {
-	operation                   func(*CPU, OperationArgs)
-	Mnemonic                    string
-	AddressingMode              AddressingMode
-	InstructionSize             uint8
-	InstructionCycles           uint8
-	AdditionalInstructionCycles uint8
+	operation        func(*CPU, OperationArgs)
+	Mnemonic         string
+	AddressingMode   AddressingMode
+	Size             uint8
+	Cycles           uint8
+	AdditionalCycles uint8
 }
 
 var Instructions = [256]Instruction{

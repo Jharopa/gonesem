@@ -19,7 +19,7 @@ func nintendulatorDisassemble(cpuPtr *cpu.CPU) string {
 
 	instruction := cpu.Instructions[opcode]
 
-	instructionSize := instruction.InstructionSize
+	instructionSize := instruction.Size
 
 	sb.WriteString(fmt.Sprintf("%04X  ", cpuPtr.PC))
 
@@ -54,9 +54,9 @@ func disassembleCPUInstruction(cpuPtr *cpu.CPU) string {
 	var sb strings.Builder
 	var instructionArg uint16
 
-	if instruction.InstructionSize == 2 {
+	if instruction.Size == 2 {
 		instructionArg = uint16(cpuPtr.Read(cpuPtr.PC + 1))
-	} else if instruction.InstructionSize == 3 {
+	} else if instruction.Size == 3 {
 		instructionArg = cpuPtr.ReadWord(cpuPtr.PC + 1)
 	}
 
