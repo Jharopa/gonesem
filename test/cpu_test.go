@@ -134,6 +134,38 @@ func TestNestest(t *testing.T) {
 
 	copy(testCPU.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
 
+	for {
+		complete := false
+
+		for !complete {
+			complete = testCPU.Clock()
+		}
+
+		if testCPU.Read(0x0002) != 0x00 {
+			testCPU.PrintCPUState(false)
+			t.Fatalf("Official instruction failed: 0%02Xh", testCPU.Read(0x0002))
+		}
+
+		if testCPU.Read(0x0003) != 0x00 {
+			testCPU.PrintCPUState(false)
+			t.Fatalf("Unofficial instruction failed: 0%02Xh", testCPU.Read(0x0003))
+		}
+
+		if testCPU.PC == 0xC66E {
+			break
+		}
+	}
+}
+
+func TestNestestNintendulatorLog(t *testing.T) {
+	rom := loadNestest()
+
+	testCPU := cpu.NewCPU()
+
+	testCPU.PC = 0xC000
+
+	copy(testCPU.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
+
 	file, err := os.Open("./data/nestest.log")
 
 	if err != nil {
@@ -150,10 +182,6 @@ func TestNestest(t *testing.T) {
 			break
 		}
 
-		if testCPU.PC == 0xE387 {
-			fmt.Print("here")
-		}
-
 		expected := scanner.Text()
 		actual := nintendulatorDisassemble(testCPU)
 
@@ -165,16 +193,6 @@ func TestNestest(t *testing.T) {
 
 		for !complete {
 			complete = testCPU.Clock()
-		}
-
-		if testCPU.Read(0x0002) != 0x00 {
-			testCPU.PrintCPUState(false)
-			t.Fatalf("Official instruction failed: 0%02Xh", testCPU.Read(0x0002))
-		}
-
-		if testCPU.Read(0x0003) != 0x00 {
-			testCPU.PrintCPUState(false)
-			t.Fatalf("Unofficial instruction failed: 0%02Xh", testCPU.Read(0x0003))
 		}
 	}
 }
