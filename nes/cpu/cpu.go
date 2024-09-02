@@ -1052,3 +1052,8 @@ func shx(cpu *CPU, args OperationArgs) {
 func shy(cpu *CPU, args OperationArgs) {
 	cpu.Write(args.address, cpu.Y&(uint8(args.address>>8)+1))
 }
+
+func tas(cpu *CPU, args OperationArgs) {
+	cpu.SR = Status(cpu.A & cpu.X)
+	cpu.Write(args.address, uint8(cpu.SR)&(uint8(args.address>>8)+1))
+}
