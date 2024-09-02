@@ -54,7 +54,8 @@ type CPU struct {
 	SP uint8  // Statck pointer register
 	SR Status // Status register
 
-	cycles uint8 // Cycles remaining for current instruction execution
+	cycles      uint8  // Cycles remaining for current instruction execution
+	TotalCycles uint64 // Total instruction cycles over lifetime of CPU
 
 	RAM [65536]uint8
 }
@@ -77,6 +78,7 @@ func (cpu *CPU) Reset() {
 	cpu.SR = StatusUnused | StatusInterrupt
 
 	cpu.cycles = 0
+	cpu.TotalCycles += 7
 }
 
 func (cpu *CPU) Clock() bool {
@@ -89,47 +91,58 @@ func (cpu *CPU) Clock() bool {
 
 	instruction := Instructions[opcode]
 
+	address, pageCrosed := cpu.fetchOperandAddress(instruction.AddressingMode)
+
 	args := OperationArgs{
 		instruction.AddressingMode,
-		cpu.fetchOperandAddress(instruction.AddressingMode),
+		address,
 	}
 
-	cpu.cycles = instruction.InstructionCycles - 1
+	cpu.cycles = instruction.InstructionCycles
+
+	if pageCrosed {
+		cpu.cycles += 1
+	}
+
 	cpu.PC += uint16(instruction.InstructionSize)
 
 	instruction.operation(cpu, args)
 
+	cpu.TotalCycles += uint64(cpu.cycles)
+
+	cpu.cycles--
+
 	return false
 }
 
-func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) uint16 {
+func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) (uint16, bool) {
 	switch addrMode {
 	// Instruction's operand is implict to the intrustion or does not exist.
 	case AddressingModeImplied:
-		return 0
+		return 0, false
 
 	// Instruction's operand is within the accumulator.
 	case AddressingModeAccumulator:
-		return 0
+		return 0, false
 
 	// Address of instructions operand is immediately adjacent to the current program counter address.
 	case AddressingModeImmediate:
-		return cpu.PC + 1
+		return cpu.PC + 1, false
 
 	// Address of instructions operand is the 8-bit value in the address immediately adjacent to
 	// the current program counter address mapped to the 0th page.
 	case AddressingModeZeroPage:
-		return uint16(cpu.Read(cpu.PC + 1))
+		return uint16(cpu.Read(cpu.PC + 1)), false
 
 	// The same as zero page address but with X registers value applied as offset
 	// Mask applied to the 8 MSB in case of overflow due to offset.
 	case AddressingModeZeroPageX:
-		return uint16(cpu.Read(cpu.PC+1)+cpu.X) & 0x00FF
+		return uint16(cpu.Read(cpu.PC+1)+cpu.X) & 0x00FF, false
 
 	// The same as zero page address but with Y registers value applied as offset
 	// Mask applied to the 8 MSB in case of overflow due to offset.
 	case AddressingModeZeroPageY:
-		return uint16(cpu.Read(cpu.PC+1)+cpu.Y) & 0x00FF
+		return uint16(cpu.Read(cpu.PC+1)+cpu.Y) & 0x00FF, false
 
 	// Special addressing mode for branching operations, the 8-bit value found at the address
 	// directly adjacent to the instructions operator is treated as a signed 2's compliment number
@@ -142,22 +155,31 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) uint16 {
 			relAddr |= 0xFF00
 		}
 
-		return (cpu.PC + 2) + relAddr
+		address := cpu.PC + 2 + relAddr
+		pageCrossed := cpu.pageCrossed(address, cpu.PC)
+
+		return address, pageCrossed
 
 	// Reads the 2 bytes starting from the address directly adjacent to the operator and treats
 	// that 16-bit number as an absoulte address.
 	case AddressingModeAbsolute:
-		return cpu.ReadWord(cpu.PC + 1)
+		return cpu.ReadWord(cpu.PC + 1), false
 
 	// Same as absolute but the 16-bit address has the contents of the X register applied to it
 	// as an offset.
 	case AddressingModeAbsoluteX:
-		return cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
+		address := cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
+		pageCrossed := cpu.pageCrossed(address, address-uint16(cpu.X))
+
+		return address, pageCrossed
 
 	// Same as absolute but the 16-bit address has the contents of the Y register applied to it
 	// as an offset.
 	case AddressingModeAbsoluteY:
-		return cpu.ReadWord(cpu.PC+1) + uint16(cpu.Y)
+		address := cpu.ReadWord(cpu.PC+1) + uint16(cpu.Y)
+		pageCrossed := cpu.pageCrossed(address, address-uint16(cpu.Y))
+
+		return address, pageCrossed
 
 	/**
 		6502's implementation of pointers, 16-bit address read from address directly after opcode,
@@ -183,21 +205,28 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) uint16 {
 	case AddressingModeIndirect:
 		ptrAddr := cpu.ReadWord(cpu.PC + 1)
 
-		return cpu.readWordbug(ptrAddr)
+		return cpu.readWordbug(ptrAddr), false
 
 	case AddressingModeIndirectX:
 		ptrAddr := (uint16(cpu.Read(cpu.PC+1)) + uint16(cpu.X)) & 0x00FF
 
-		return cpu.readWordbug(ptrAddr)
+		return cpu.readWordbug(ptrAddr), false
 
 	case AddressingModeIndirectY:
 		ptrAddr := uint16(cpu.Read(cpu.PC + 1))
 
-		return cpu.readWordbug(ptrAddr) + uint16(cpu.Y)
+		address := cpu.readWordbug(ptrAddr) + uint16(cpu.Y)
+		pageCrossed := cpu.pageCrossed(address, address-uint16(cpu.Y))
+
+		return address, pageCrossed
 
 	default:
 		panic(fmt.Sprintf("Invalid addressing mode %d", addrMode))
 	}
+}
+
+func (cpu *CPU) pageCrossed(a, b uint16) bool {
+	return a&0xFF00 != b&0xFF00
 }
 
 func (cpu *CPU) PrintCPUState(hexidecimal bool) {
@@ -445,6 +474,7 @@ register to the pre-calculated relative address in address argument.
 func bcc(cpu *CPU, args OperationArgs) {
 	if !cpu.getStatus(StatusCarry) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -458,6 +488,7 @@ register to the pre-calculated relative address in address argument.
 func bcs(cpu *CPU, args OperationArgs) {
 	if cpu.getStatus(StatusCarry) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -471,6 +502,7 @@ register to the pre-calculated relative address in address argument.
 func beq(cpu *CPU, args OperationArgs) {
 	if cpu.getStatus(StatusZero) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -502,6 +534,7 @@ register to the pre-calculated relative address in address argument.
 func bmi(cpu *CPU, args OperationArgs) {
 	if cpu.getStatus(StatusNegative) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -515,6 +548,7 @@ register to the pre-calculated relative address in address argument.
 func bne(cpu *CPU, args OperationArgs) {
 	if !cpu.getStatus(StatusZero) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -528,6 +562,7 @@ register to the pre-calculated relative address in address argument.
 func bpl(cpu *CPU, args OperationArgs) {
 	if !cpu.getStatus(StatusNegative) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -548,6 +583,7 @@ register to the pre-calculated relative address in address argument.
 func bvc(cpu *CPU, args OperationArgs) {
 	if !cpu.getStatus(StatusOverflow) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 
@@ -561,6 +597,7 @@ register to the pre-calculated relative address in address argument.
 func bvs(cpu *CPU, args OperationArgs) {
 	if cpu.getStatus(StatusOverflow) {
 		cpu.PC = args.address
+		cpu.cycles += 1
 	}
 }
 

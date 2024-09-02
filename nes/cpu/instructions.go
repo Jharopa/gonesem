@@ -153,7 +153,7 @@ var Instructions = [256]Instruction{
 	{sta, "STA", AddressingModeAbsolute, 3, 4},    // 0x8D
 	{stx, "STX", AddressingModeAbsolute, 3, 4},    // 0x8E
 	{sax, "SAX", AddressingModeAbsolute, 3, 4},    // 0x8F
-	{bcc, "BCC", AddressingModeRelative, 2, 2},    // 0x90
+	{bcc, "BCC", AddressingModeRelative, 2, 2},    // 0x90 +1 cycle if page crossed +1 if branch successful
 	{sta, "STA", AddressingModeIndirectY, 2, 6},   // 0x91
 	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x92
 	{ahx, "AHX", AddressingModeIndirectY, 2, 6},   // 0x93

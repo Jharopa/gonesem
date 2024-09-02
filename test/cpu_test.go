@@ -41,6 +41,8 @@ func nintendulatorDisassemble(cpuPtr *cpu.CPU) string {
 	sb.WriteString(fmt.Sprintf(" P:%02X", cpuPtr.SR))
 	sb.WriteString(fmt.Sprintf(" SP:%02X", cpuPtr.SP))
 
+	sb.WriteString(fmt.Sprintf(" CYC:%d", cpuPtr.TotalCycles))
+
 	return sb.String()
 }
 
@@ -146,6 +148,10 @@ func TestNestest(t *testing.T) {
 	for {
 		if !scanner.Scan() {
 			break
+		}
+
+		if testCPU.PC == 0xC9F8 {
+			fmt.Print("Here")
 		}
 
 		expected := scanner.Text()
