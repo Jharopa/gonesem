@@ -134,8 +134,6 @@ func TestNestest(t *testing.T) {
 
 	copy(testCPU.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
 
-	testCPU.TotalCycles = 7
-
 	file, err := os.Open("./data/nestest.log")
 
 	if err != nil {

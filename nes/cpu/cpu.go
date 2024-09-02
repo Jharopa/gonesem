@@ -101,7 +101,7 @@ func (cpu *CPU) Clock() bool {
 	cpu.cycles = instruction.InstructionCycles
 
 	if pageCrosed {
-		cpu.cycles += 1
+		cpu.cycles += instruction.AdditionalInstructionCycles
 	}
 
 	cpu.PC += uint16(instruction.InstructionSize)
@@ -167,7 +167,6 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) (uint16, bool) {
 	case AddressingModeAbsoluteX:
 		address := cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
 		pageCrossed := cpu.pageCrossed(address-uint16(cpu.X), address)
-
 
 		return address, pageCrossed
 
@@ -535,7 +534,7 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bmi(cpu *CPU, args OperationArgs) {
-	branched := cpu.getStatus(StatusNegative) 
+	branched := cpu.getStatus(StatusNegative)
 	cpu.branch(branched, args.address)
 }
 
