@@ -404,6 +404,7 @@ func (cpu *CPU) setZN(value uint8) {
 func (cpu *CPU) branch(branch bool, address uint16) {
 	if branch {
 		cpu.cycles += 1
+
 		if cpu.pageCrossed(address, cpu.PC) {
 			cpu.cycles += 1
 		}
@@ -873,10 +874,6 @@ func tya(cpu *CPU, args OperationArgs) {
 	cpu.setZN(cpu.A)
 }
 
-func xxx(cpu *CPU, args OperationArgs) {
-
-}
-
 // ----------------- //
 // Unoffical Opcodes //
 // ----------------- //
@@ -948,22 +945,6 @@ func axs(cpu *CPU, args OperationArgs) {
 	cpu.X = uint8(result)
 }
 
-func lax(cpu *CPU, args OperationArgs) {
-	cpu.A = cpu.Read(args.address)
-	cpu.X = cpu.A
-	cpu.setZN(cpu.A)
-}
-
-func las(cpu *CPU, args OperationArgs) {
-	cpu.SP &= cpu.Read(args.address)
-	cpu.A = cpu.SP
-	cpu.X = cpu.SP
-}
-
-func sax(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.A&cpu.X)
-}
-
 func dcp(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address) - 1
 	cpu.Write(args.address, operand)
@@ -988,6 +969,18 @@ func isc(cpu *CPU, args OperationArgs) {
 	cpu.setZN(uint8(result))
 
 	cpu.A = uint8(result)
+}
+
+func las(cpu *CPU, args OperationArgs) {
+	cpu.SP &= cpu.Read(args.address)
+	cpu.A = cpu.SP
+	cpu.X = cpu.SP
+}
+
+func lax(cpu *CPU, args OperationArgs) {
+	cpu.A = cpu.Read(args.address)
+	cpu.X = cpu.A
+	cpu.setZN(cpu.A)
 }
 
 func rla(cpu *CPU, args OperationArgs) {
@@ -1021,6 +1014,18 @@ func rra(cpu *CPU, args OperationArgs) {
 	cpu.A = uint8(result)
 }
 
+func sax(cpu *CPU, args OperationArgs) {
+	cpu.Write(args.address, cpu.A&cpu.X)
+}
+
+func shx(cpu *CPU, args OperationArgs) {
+	cpu.Write(args.address, cpu.X&(uint8(args.address>>8)+1))
+}
+
+func shy(cpu *CPU, args OperationArgs) {
+	cpu.Write(args.address, cpu.Y&(uint8(args.address>>8)+1))
+}
+
 func slo(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 
@@ -1045,15 +1050,12 @@ func sre(cpu *CPU, args OperationArgs) {
 	cpu.setZN(cpu.A)
 }
 
-func shx(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.X&(uint8(args.address>>8)+1))
-}
-
-func shy(cpu *CPU, args OperationArgs) {
-	cpu.Write(args.address, cpu.Y&(uint8(args.address>>8)+1))
-}
-
 func tas(cpu *CPU, args OperationArgs) {
 	cpu.SR = Status(cpu.A & cpu.X)
 	cpu.Write(args.address, uint8(cpu.SR)&(uint8(args.address>>8)+1))
+}
+
+// Unimplemented operation function
+func xxx(cpu *CPU, args OperationArgs) {
+
 }

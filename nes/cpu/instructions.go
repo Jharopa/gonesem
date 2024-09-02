@@ -165,7 +165,7 @@ var Instructions = [256]Instruction{
 	{tya, "TYA", AddressingModeImplied, 1, 2, 0},     // 0x98
 	{sta, "STA", AddressingModeAbsoluteY, 3, 5, 0},   // 0x99
 	{txs, "TXS", AddressingModeImplied, 1, 2, 0},     // 0x9A
-	{tas, "TAS", AddressingModeAbsoluteY, 3, 5, 0},   // 0x9B Unimplemented
+	{tas, "TAS", AddressingModeAbsoluteY, 3, 5, 0},   // 0x9B
 	{shy, "SHY", AddressingModeAbsoluteX, 3, 5, 0},   // 0x9C
 	{sta, "STA", AddressingModeAbsoluteX, 3, 5, 0},   // 0x9D
 	{shx, "SHX", AddressingModeAbsoluteY, 3, 5, 0},   // 0x9E
