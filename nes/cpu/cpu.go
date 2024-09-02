@@ -78,7 +78,7 @@ func (cpu *CPU) Reset() {
 	cpu.SR = StatusUnused | StatusInterrupt
 
 	cpu.cycles = 0
-	cpu.TotalCycles += 7
+	cpu.TotalCycles = 0
 }
 
 func (cpu *CPU) Clock() bool {
@@ -155,10 +155,7 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) (uint16, bool) {
 			relAddr |= 0xFF00
 		}
 
-		address := cpu.PC + 2 + relAddr
-		pageCrossed := cpu.pageCrossed(address, cpu.PC)
-
-		return address, pageCrossed
+		return cpu.PC + 2 + relAddr, false
 
 	// Reads the 2 bytes starting from the address directly adjacent to the operator and treats
 	// that 16-bit number as an absoulte address.
@@ -169,7 +166,8 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) (uint16, bool) {
 	// as an offset.
 	case AddressingModeAbsoluteX:
 		address := cpu.ReadWord(cpu.PC+1) + uint16(cpu.X)
-		pageCrossed := cpu.pageCrossed(address, address-uint16(cpu.X))
+		pageCrossed := cpu.pageCrossed(address-uint16(cpu.X), address)
+
 
 		return address, pageCrossed
 
@@ -404,6 +402,17 @@ func (cpu *CPU) setZN(value uint8) {
 	cpu.setN(value)
 }
 
+func (cpu *CPU) branch(branch bool, address uint16) {
+	if branch {
+		cpu.cycles += 1
+		if cpu.pageCrossed(address, cpu.PC) {
+			cpu.cycles += 1
+		}
+
+		cpu.PC = address
+	}
+}
+
 /*
 *
 Add with carry
@@ -472,10 +481,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bcc(cpu *CPU, args OperationArgs) {
-	if !cpu.getStatus(StatusCarry) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := !cpu.getStatus(StatusCarry)
+	cpu.branch(branched, args.address)
 }
 
 /*
@@ -486,10 +493,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bcs(cpu *CPU, args OperationArgs) {
-	if cpu.getStatus(StatusCarry) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := cpu.getStatus(StatusCarry)
+	cpu.branch(branched, args.address)
 }
 
 /*
@@ -500,10 +505,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func beq(cpu *CPU, args OperationArgs) {
-	if cpu.getStatus(StatusZero) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := cpu.getStatus(StatusZero)
+	cpu.branch(branched, args.address)
 }
 
 /*
@@ -532,10 +535,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bmi(cpu *CPU, args OperationArgs) {
-	if cpu.getStatus(StatusNegative) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := cpu.getStatus(StatusNegative) 
+	cpu.branch(branched, args.address)
 }
 
 /*
@@ -546,10 +547,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bne(cpu *CPU, args OperationArgs) {
-	if !cpu.getStatus(StatusZero) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := !cpu.getStatus(StatusZero)
+	cpu.branch(branched, args.address)
 }
 
 /*
@@ -560,10 +559,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bpl(cpu *CPU, args OperationArgs) {
-	if !cpu.getStatus(StatusNegative) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := !cpu.getStatus(StatusNegative)
+	cpu.branch(branched, args.address)
 }
 
 func brk(cpu *CPU, args OperationArgs) {
@@ -581,10 +578,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bvc(cpu *CPU, args OperationArgs) {
-	if !cpu.getStatus(StatusOverflow) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := !cpu.getStatus(StatusOverflow)
+	cpu.branch(branched, args.address)
 }
 
 /*
@@ -595,10 +590,8 @@ register to the pre-calculated relative address in address argument.
 *
 */
 func bvs(cpu *CPU, args OperationArgs) {
-	if cpu.getStatus(StatusOverflow) {
-		cpu.PC = args.address
-		cpu.cycles += 1
-	}
+	branched := cpu.getStatus(StatusOverflow)
+	cpu.branch(branched, args.address)
 }
 
 func clc(cpu *CPU, args OperationArgs) {
