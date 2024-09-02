@@ -8,7 +8,7 @@ type Instruction struct {
 	InstructionCycles uint8
 }
 
-var instructions = [256]Instruction{
+var Instructions = [256]Instruction{
 	{brk, "BRK", AddressingModeImplied, 1, 7},     // 0x00
 	{ora, "ORA", AddressingModeIndirectX, 2, 6},   // 0x01
 	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x02
@@ -77,7 +77,7 @@ var instructions = [256]Instruction{
 	{eor, "EOR", AddressingModeIndirectX, 2, 6},   // 0x41
 	{nop, "STP", AddressingModeImplied, 1, 0},     // 0x42
 	{sre, "SRE", AddressingModeIndirectX, 2, 8},   // 0x43
-	{nop, "NOP", AddressingModeImplied, 2, 3},     // 0x44
+	{nop, "NOP", AddressingModeZeroPage, 2, 3},    // 0x44
 	{eor, "EOR", AddressingModeZeroPage, 2, 3},    // 0x45
 	{lsr, "LSR", AddressingModeZeroPage, 2, 5},    // 0x46
 	{sre, "SRE", AddressingModeZeroPage, 2, 5},    // 0x47
@@ -133,7 +133,7 @@ var instructions = [256]Instruction{
 	{adc, "ADC", AddressingModeAbsoluteY, 3, 4},   // 0x79
 	{nop, "NOP", AddressingModeImplied, 1, 2},     // 0x7A
 	{rra, "RRA", AddressingModeAbsoluteY, 3, 7},   // 0x7B
-	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0x7C
+	{nop, "NOP", AddressingModeAbsoluteX, 3, 4},   // 0x7C +1 cycle if page crossed
 	{adc, "ADC", AddressingModeAbsoluteX, 3, 4},   // 0x7D
 	{ror, "ROR", AddressingModeAbsoluteX, 3, 7},   // 0x7E
 	{rra, "RRA", AddressingModeAbsoluteX, 3, 7},   // 0x7F
@@ -148,7 +148,7 @@ var instructions = [256]Instruction{
 	{dey, "DEY", AddressingModeImplied, 1, 2},     // 0x88
 	{nop, "NOP", AddressingModeImmediate, 2, 2},   // 0x89
 	{txa, "TXA", AddressingModeImplied, 1, 2},     // 0x8A
-	{xxx, "XAA", AddressingModeImplied, 0, 0},     // 0x8B X
+	{xxx, "XAA", AddressingModeImplied, 0, 0},     // 0x8B Unimplemented
 	{sty, "STY", AddressingModeAbsolute, 3, 4},    // 0x8C
 	{sta, "STA", AddressingModeAbsolute, 3, 4},    // 0x8D
 	{stx, "STX", AddressingModeAbsolute, 3, 4},    // 0x8E
@@ -164,7 +164,7 @@ var instructions = [256]Instruction{
 	{tya, "TYA", AddressingModeImplied, 1, 2},     // 0x98
 	{sta, "STA", AddressingModeAbsoluteY, 3, 5},   // 0x99
 	{txs, "TXS", AddressingModeImplied, 1, 2},     // 0x9A
-	{xxx, "TAS", AddressingModeAbsoluteY, 3, 5},   // 0x9B X
+	{xxx, "TAS", AddressingModeAbsoluteY, 3, 5},   // 0x9B Unimplemented
 	{shy, "SHY", AddressingModeAbsoluteX, 3, 5},   // 0x9C
 	{sta, "STA", AddressingModeAbsoluteX, 3, 5},   // 0x9D
 	{shx, "SHX", AddressingModeAbsoluteY, 3, 5},   // 0x9E
@@ -180,7 +180,7 @@ var instructions = [256]Instruction{
 	{tay, "TAY", AddressingModeImplied, 1, 2},     // 0xA8
 	{lda, "LDA", AddressingModeImmediate, 2, 2},   // 0xA9
 	{tax, "TAX", AddressingModeImplied, 1, 2},     // 0xAA
-	{xxx, "LXA", AddressingModeImmediate, 2, 2},   // 0xAB X
+	{xxx, "LXA", AddressingModeImmediate, 2, 2},   // 0xAB Unimplemented
 	{ldy, "LDY", AddressingModeAbsolute, 3, 4},    // 0xAC
 	{lda, "LDA", AddressingModeAbsolute, 3, 4},    // 0xAD
 	{ldx, "LDX", AddressingModeAbsolute, 3, 4},    // 0xAE

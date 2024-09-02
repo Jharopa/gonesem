@@ -87,7 +87,7 @@ func (cpu *CPU) Clock() bool {
 
 	opcode := cpu.Read(cpu.PC)
 
-	instruction := instructions[opcode]
+	instruction := Instructions[opcode]
 
 	args := OperationArgs{
 		instruction.AddressingMode,
@@ -183,48 +183,42 @@ func (cpu *CPU) fetchOperandAddress(addrMode AddressingMode) uint16 {
 	case AddressingModeIndirect:
 		ptrAddr := cpu.ReadWord(cpu.PC + 1)
 
-		if ptrAddr&0x00FF == 0x00FF {
-			return uint16(cpu.Read(ptrAddr&0xFF00))<<8 | uint16(cpu.Read(ptrAddr))
-		} else {
-			return cpu.ReadWord(ptrAddr)
-		}
+		return cpu.readWordbug(ptrAddr)
 
 	case AddressingModeIndirectX:
-		ptr := uint16(cpu.Read(cpu.PC + 1))
+		ptrAddr := (uint16(cpu.Read(cpu.PC+1)) + uint16(cpu.X)) & 0x00FF
 
-		lo := uint16(cpu.Read((ptr + uint16(cpu.X)) & 0x00FF))
-		hi := uint16(cpu.Read((ptr + uint16(cpu.X) + 1) & 0x00FF))
-
-		return hi<<8 | lo
+		return cpu.readWordbug(ptrAddr)
 
 	case AddressingModeIndirectY:
-		ptr := uint16(cpu.Read(cpu.PC + 1))
+		ptrAddr := uint16(cpu.Read(cpu.PC + 1))
 
-		lo := uint16(cpu.Read(ptr) & 0x00FF)
-		hi := uint16(cpu.Read(ptr+1) & 0x00FF)
-
-		return (hi<<8 | lo) + uint16(cpu.Y)
+		return cpu.readWordbug(ptrAddr) + uint16(cpu.Y)
 
 	default:
 		panic(fmt.Sprintf("Invalid addressing mode %d", addrMode))
 	}
 }
 
-func (cpu *CPU) PrintCPUState() {
+func (cpu *CPU) PrintCPUState(hexidecimal bool) {
 	cpu.PrintRegisters()
-	cpu.PrintProcessorStatus()
+	cpu.PrintProcessorStatus(hexidecimal)
 }
 
 func (cpu *CPU) PrintRegisters() {
 	fmt.Printf(
-		"Accumulator register: %d\nIndex register X: %d\nIndex register Y: %d\nProgram counter: 0x%04X\nStack pointer: 0x%02X\n",
+		"Accumulator register: 0x%02X\nIndex register X: 0x%02X\nIndex register Y: 0x%02X\nProgram counter: 0x%04X\nStack pointer: 0x%02X\n",
 		cpu.A, cpu.X, cpu.Y, cpu.PC, cpu.SP,
 	)
 }
 
-func (cpu *CPU) PrintProcessorStatus() {
-	fmt.Printf("NVUBDIZC\n")
-	fmt.Printf("%08b\n", cpu.SR)
+func (cpu *CPU) PrintProcessorStatus(hexidecimal bool) {
+	if hexidecimal {
+		fmt.Printf("Processor status register: 0x%02X\n", cpu.SR)
+	} else {
+		fmt.Printf("NVUBDIZC\n")
+		fmt.Printf("%08b\n", cpu.SR)
+	}
 }
 
 // ------------------------- //
@@ -267,7 +261,20 @@ func (cpu *CPU) Write(addr uint16, value uint8) {
 func (cpu *CPU) ReadWord(addr uint16) uint16 {
 	lo := uint16(cpu.Read(addr))
 	hi := uint16(cpu.Read(addr + 1))
+
 	return (hi << 8) | lo
+}
+
+// Returns 16 bit value from memory similar to ReadWord, emulating the 6502 hardware bug
+// where the high byte is read from the start of the low bytes page if the low byte is
+// on page boudary instead of the next page i.e. the low byte of the address passed in
+// is FF
+func (cpu *CPU) readWordbug(addr uint16) uint16 {
+	if addr&0x00FF == 0x00FF {
+		return uint16(cpu.Read(addr&0xFF00))<<8 | uint16(cpu.Read(addr))
+	} else {
+		return cpu.ReadWord(addr)
+	}
 }
 
 // Writes 16 bit value to address addr converting value to little-endian order
@@ -722,6 +729,7 @@ func pla(cpu *CPU, args OperationArgs) {
 func plp(cpu *CPU, args OperationArgs) {
 	cpu.SR = Status(cpu.pop())
 	cpu.setStatus(StatusUnused, true)
+	cpu.setStatus(StatusBreak, false)
 }
 
 func rol(cpu *CPU, args OperationArgs) {
@@ -819,7 +827,7 @@ func tay(cpu *CPU, args OperationArgs) {
 
 func tsx(cpu *CPU, args OperationArgs) {
 	cpu.X = cpu.SP
-	cpu.setZN(cpu.Y)
+	cpu.setZN(cpu.X)
 }
 
 func txa(cpu *CPU, args OperationArgs) {
@@ -999,8 +1007,8 @@ func slo(cpu *CPU, args OperationArgs) {
 func sre(cpu *CPU, args OperationArgs) {
 	operand := cpu.Read(args.address)
 
-	cpu.setStatus(StatusCarry, operand&0x80 != 0)
-	operand <<= 1
+	cpu.setStatus(StatusCarry, operand&0x01 != 0)
+	operand >>= 1
 
 	cpu.Write(args.address, operand)
 
