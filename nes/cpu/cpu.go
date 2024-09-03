@@ -23,6 +23,12 @@ const (
 	StackReset uint8  = 0x00FD
 )
 
+const (
+	ResetVector uint16 = 0xFFFC
+	IRQVector   uint16 = 0xFFFE
+	NMIVector   uint16 = 0xFFFA
+)
+
 type AddressingMode uint8
 
 const (
@@ -73,7 +79,7 @@ func (cpu *CPU) Reset() {
 	cpu.A = 0
 	cpu.X = 0
 	cpu.Y = 0
-	cpu.PC = cpu.ReadWord(0xFFFC)
+	cpu.PC = cpu.ReadWord(ResetVector)
 	cpu.SP = StackReset
 	cpu.SR = StatusUnused | StatusInterrupt
 
@@ -412,6 +418,46 @@ func (cpu *CPU) branch(branch bool, address uint16) {
 		cpu.PC = address
 	}
 }
+
+// ---------- //
+// Interrupts //
+// ---------- //
+
+func (cpu *CPU) IRQ() {
+	if !cpu.getStatus(StatusInterrupt) {
+		cpu.pushWord(cpu.PC)
+
+		cpu.setStatus(StatusBreak, false)
+		cpu.setStatus(StatusInterrupt, true)
+		cpu.setStatus(StatusUnused, true)
+
+		cpu.push(uint8(cpu.SR))
+
+		cpu.PC = cpu.ReadWord(IRQVector)
+
+		cpu.cycles = 7
+		cpu.TotalCycles += uint64(cpu.cycles)
+	}
+}
+
+func (cpu *CPU) NMI() {
+	cpu.pushWord(cpu.PC)
+
+	cpu.setStatus(StatusBreak, false)
+	cpu.setStatus(StatusInterrupt, true)
+	cpu.setStatus(StatusUnused, true)
+
+	cpu.push(uint8(cpu.SR))
+
+	cpu.PC = cpu.ReadWord(NMIVector)
+
+	cpu.cycles = 8
+	cpu.TotalCycles += uint64(cpu.cycles)
+}
+
+// --------------- //
+// Offical Opcodes //
+// --------------- //
 
 /*
 *
