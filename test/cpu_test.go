@@ -12,6 +12,18 @@ import (
 	"gonesem/nes/cpu"
 )
 
+type TestMemory struct {
+	RAM [65535]uint8
+}
+
+func (memory *TestMemory) Read(addr uint16) uint8 {
+	return memory.RAM[addr]
+}
+
+func (memory *TestMemory) Write(addr uint16, value uint8) {
+	memory.RAM[addr] = value
+}
+
 func nintendulatorDisassemble(cpuPtr *cpu.CPU) string {
 	var sb strings.Builder
 
@@ -128,11 +140,13 @@ func loadNestest() []byte {
 func TestNestest(t *testing.T) {
 	rom := loadNestest()
 
-	testCPU := cpu.NewCPU()
+	memory := &TestMemory{}
+
+	copy(memory.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
+
+	testCPU := cpu.NewCPU(memory)
 
 	testCPU.PC = 0xC000
-
-	copy(testCPU.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
 
 	for {
 		complete := false
@@ -160,11 +174,13 @@ func TestNestest(t *testing.T) {
 func TestNestestNintendulatorLog(t *testing.T) {
 	rom := loadNestest()
 
-	testCPU := cpu.NewCPU()
+	memory := &TestMemory{}
+
+	copy(memory.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
+
+	testCPU := cpu.NewCPU(memory)
 
 	testCPU.PC = 0xC000
-
-	copy(testCPU.RAM[0xC000:0xFFFF], rom[0x10:0x4000])
 
 	file, err := os.Open("./data/nestest.log")
 

@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"fmt"
+	"gonesem/nes/memory"
 	"gonesem/nes/util"
 )
 
@@ -63,12 +64,12 @@ type CPU struct {
 	cycles      uint8  // Cycles remaining for current instruction execution
 	TotalCycles uint64 // Total instruction cycles over lifetime of CPU
 
-	RAM [65536]uint8
+	memory memory.Memory
 }
 
-func NewCPU() *CPU {
-	// 6502 registers at powerup
-	cpu := &CPU{}
+func NewCPU(memory memory.Memory) *CPU {
+
+	cpu := &CPU{memory: memory}
 	cpu.Reset()
 
 	return cpu
@@ -281,12 +282,12 @@ Value: 0xFF29
 
 // Returns value from memory at address addr
 func (cpu *CPU) Read(addr uint16) uint8 {
-	return cpu.RAM[addr]
+	return cpu.memory.Read(addr)
 }
 
 // Writes value to address addr
 func (cpu *CPU) Write(addr uint16, value uint8) {
-	cpu.RAM[addr] = value
+	cpu.memory.Write(addr, value)
 }
 
 // Returns 16 bit value from memory at address addr converting from little-endian order

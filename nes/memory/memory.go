@@ -1,4 +1,4 @@
-package nes
+package memory
 
 //  _______________ $10000  _______________
 // | PRG-ROM       |       |               |
