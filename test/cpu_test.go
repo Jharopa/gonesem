@@ -1,4 +1,4 @@
-package cpu_test
+package nes_test
 
 import (
 	"bufio"
