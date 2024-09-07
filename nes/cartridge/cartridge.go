@@ -35,10 +35,10 @@ func NewHeader(data []uint8) Header {
 }
 
 type Cartridge struct {
-	PRGBanks  uint8
-	CHRBanks  uint8
-	PRGMemory []uint8
-	CHRMemory []uint8
+	pgrBanks  uint8
+	chrBanks  uint8
+	pgrMemory []uint8
+	chrMemory []uint8
 	mapper    Mapper
 }
 
@@ -52,7 +52,7 @@ func NewCartridge(romPath string) *Cartridge {
 	mapperID := (header.Mapper1 & 0xF0) | header.Mapper2>>4
 	hasTraining := header.Mapper1>>2&0x01 != 0
 
-	cartridge.mapper = NewMapper(mapperID)
+	cartridge.mapper = NewMapper(mapperID, cartridge)
 
 	var trainingOffset uint16
 
@@ -62,14 +62,14 @@ func NewCartridge(romPath string) *Cartridge {
 		trainingOffset = 0
 	}
 
-	cartridge.PRGBanks = header.PRGSize
-	cartridge.CHRBanks = header.CHRSize
+	cartridge.pgrBanks = header.PRGSize
+	cartridge.chrBanks = header.CHRSize
 
 	pgrOffset := 0x10 + trainingOffset
-	cartridge.PRGMemory = rom[pgrOffset : uint16(header.PRGSize)*16384]
+	cartridge.pgrMemory = rom[pgrOffset : uint16(header.PRGSize)*16384]
 
 	chrOffset := pgrOffset + uint16(header.PRGSize)*16384
-	cartridge.CHRMemory = rom[chrOffset : uint16(header.CHRSize)*8192]
+	cartridge.chrMemory = rom[chrOffset : uint16(header.CHRSize)*8192]
 
 	return cartridge
 }
@@ -99,17 +99,17 @@ func LoadROM(romPath string) []uint8 {
 }
 
 func (cartridge *Cartridge) PRGRead(addr uint16) uint8 {
-	return cartridge.mapper.PGRRead(addr, cartridge.PRGMemory)
+	return cartridge.mapper.PGRRead(addr)
 }
 
 func (cartridge *Cartridge) PRGWrite(addr uint16, value uint8) {
-	cartridge.mapper.PRGWrite(addr, value, cartridge.PRGMemory)
+	cartridge.mapper.PRGWrite(addr, value)
 }
 
 func (cartridge *Cartridge) CHRRead(addr uint16) uint8 {
-	return cartridge.mapper.CHRRead(addr, cartridge.CHRMemory)
+	return cartridge.mapper.CHRRead(addr)
 }
 
 func (cartridge *Cartridge) CHRWrite(addr uint16, value uint8) {
-	cartridge.mapper.CHRWrite(addr, value, cartridge.CHRMemory)
+	cartridge.mapper.CHRWrite(addr, value)
 }
