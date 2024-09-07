@@ -22,7 +22,7 @@ type Header struct {
 	_          [5]uint8 // Unused in iNES 1.0 format
 }
 
-func NewHeader(data []uint8) Header {
+func newHeader(data []uint8) Header {
 	header := Header{}
 
 	err := binary.Read(bytes.NewReader(data[:]), binary.BigEndian, &header)
@@ -45,9 +45,9 @@ type Cartridge struct {
 func NewCartridge(romPath string) *Cartridge {
 	cartridge := &Cartridge{}
 
-	rom := LoadROM(romPath)
+	rom := loadROM(romPath)
 
-	header := NewHeader(rom[0x00:0x10])
+	header := newHeader(rom[0x00:0x10])
 
 	mapperID := (header.Mapper1 & 0xF0) | header.Mapper2>>4
 	hasTraining := header.Mapper1>>2&0x01 != 0
@@ -74,7 +74,7 @@ func NewCartridge(romPath string) *Cartridge {
 	return cartridge
 }
 
-func LoadROM(romPath string) []uint8 {
+func loadROM(romPath string) []uint8 {
 	file, err := os.Open(romPath)
 
 	if err != nil {

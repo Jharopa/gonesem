@@ -1,6 +1,13 @@
 package ppu
 
+import "gonesem/nes/cartridge"
+
 type PPU struct {
+	cartridge *cartridge.Cartridge
+}
+
+func NewPPU(cartridge *cartridge.Cartridge) *PPU {
+	return &PPU{cartridge: cartridge}
 }
 
 func (ppu *PPU) Read(addr uint16) uint8 {
@@ -45,4 +52,8 @@ func (ppu *PPU) Write(addr uint16, value uint8) {
 	case 0x0007:
 		break
 	}
+}
+
+func (ppu *PPU) Clock() {
+
 }
