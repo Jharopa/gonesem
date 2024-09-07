@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -53,12 +52,7 @@ func NewCartridge(romPath string) *Cartridge {
 	mapperID := (header.Mapper1 & 0xF0) | header.Mapper2>>4
 	hasTraining := header.Mapper1>>2&0x01 != 0
 
-	switch mapperID {
-	case 0:
-		cartridge.mapper = nil
-	default:
-		panic(fmt.Sprintf("Unsupported mapper, ID %d", mapperID))
-	}
+	cartridge.mapper = NewMapper(mapperID)
 
 	var trainingOffset uint16
 
@@ -102,4 +96,20 @@ func LoadROM(romPath string) []uint8 {
 	}
 
 	return rom
+}
+
+func (cartridge *Cartridge) PRGRead(addr uint16) uint8 {
+	return cartridge.mapper.PGRRead(addr, cartridge.PRGMemory)
+}
+
+func (cartridge *Cartridge) PRGWrite(addr uint16, value uint8) {
+	cartridge.mapper.PRGWrite(addr, value, cartridge.PRGMemory)
+}
+
+func (cartridge *Cartridge) CHRRead(addr uint16) uint8 {
+	return cartridge.mapper.CHRRead(addr, cartridge.CHRMemory)
+}
+
+func (cartridge *Cartridge) CHRWrite(addr uint16, value uint8) {
+	cartridge.mapper.CHRWrite(addr, value, cartridge.CHRMemory)
 }
