@@ -26,3 +26,4 @@ go.work.sum
 
 # Project
 test/data/roms
+test/data/pals
