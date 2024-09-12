@@ -51,11 +51,16 @@ func (nes *NES) Write(addr uint16, value uint8) {
 }
 
 func (nes *NES) Clock() {
+	nes.ppu.Clock()
+
 	if nes.TotalCycles%3 == 0 {
 		nes.cpu.Clock()
 	}
 
-	nes.ppu.Clock()
+	if nes.ppu.EmitNMI {
+		nes.cpu.NMI()
+		nes.ppu.EmitNMI = false
+	}
 
 	nes.TotalCycles++
 }

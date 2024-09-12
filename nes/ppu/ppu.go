@@ -4,49 +4,20 @@ import (
 	"gonesem/nes/cartridge"
 )
 
-type (
-	Ctrl   uint8
-	Mask   uint8
-	Status uint8
-)
-
-const (
-	CtrlNametableAddressX     Ctrl = 1 << iota // N 1: Add 256 to X scroll position
-	CtrlNametableAddressY                      // N 1: Add 240 to Y scroll position
-	CtrlIncrementMode                          // I 0: Add 1 across; 1: Add 32 down
-	CtrlSpriteTableAddress                     // S 0: Address $0000; 1: Address $1000; ignore in 8x16
-	CtrlBackgroundTableAddres                  // B 0: Address $0000; 1: Address $1000
-	CtrlSpriteSize                             // H 0: 8x8 pixles; 1: 8x16 pixels
-	CtrlMasterSlaveMode                        // P 0: read backfrop from EXT pins; 1: output color on EXT pins
-	CtrlGenerateNMI                            // V 0: off; 1: on
-)
-
-const (
-	MaskGreyscale          Mask = 1 << iota // g
-	MaskShowBackgroundLeft                  // m Show background in the leftmost 8 pixles of screen
-	MaskShowSpritesLeft                     // M Show sprites in the leftmost 8 pixles of screen
-	MaskShowBackground                      // b
-	MaskShowSprites                         // s
-	MaskEmphasizeRed                        // R
-	MaskEmphasizeGreen                      // G
-	MaskEmphasizeBlue                       // B
-)
-
-const (
-	StatusOpenBus       Status = 1 << 5 // O
-	StatusSpriteZeroHit Status = 1 << 6 // S
-	StatusVerticalBlank Status = 1 << 7 // V
-)
-
 type PPU struct {
 	ctrl   Ctrl   // Control register
 	mask   Mask   // Mask register
 	status Status // Status register
 
+	scanline int16 // Current display scanline
+	cycle    int16 // Offest into scanline giving current pixel
+
 	memoryAddress uint16 // CPU -> PPU data read/write
 	addressLatch  bool   // HI/LO byte PPU write address latch
 
 	dataBuffer uint8 // Temporary databuffer used in 1-cycle PPU data read delay
+
+	EmitNMI bool
 
 	nameTable    [2048]uint8
 	paletteTable [32]uint8
@@ -65,20 +36,21 @@ i.e. the connection from the CPU to PPU via the NES's main bus
 NOTE. It is important to keep in mind that the act of the CPU reading
 from the PPU can transform the state of the PPU, e.g. The CPU reading
 the status register via address 0x2002 will cause the the vertical blank
-flag in that register to become unset.
+flag in the status register and the address latch register to become unset.
 */
 func (ppu *PPU) Read(addr uint16) uint8 {
+	var value uint8 = 0
+
 	switch addr {
 	case 0x0000: // Control
 		break
 	case 0x0001: // Mask
 		break
 	case 0x0002: // Status
-		value := uint8(ppu.status) | (ppu.dataBuffer & 0x1F)
+		value = (uint8(ppu.status) & 0xE0) | (ppu.dataBuffer & 0x1F)
 
-		ppu.status &^= StatusVerticalBlank
-
-		return value
+		ppu.setStatus(StatusVerticalBlank, false)
+		ppu.addressLatch = false
 	case 0x0003: // OAM Address
 		break
 	case 0x0004: // OAM Data
@@ -88,17 +60,17 @@ func (ppu *PPU) Read(addr uint16) uint8 {
 	case 0x0006: // PPU Address
 		break
 	case 0x0007: // PPU Data
-		if ppu.memoryAddress > 0x3F00 {
-			return ppu.dataBuffer
-		}
-
-		value := ppu.dataBuffer
+		value = ppu.dataBuffer
 		ppu.dataBuffer = ppu.readMemory(ppu.memoryAddress)
 
-		return value
+		if ppu.memoryAddress > 0x3F00 {
+			value = ppu.dataBuffer
+		}
+
+		ppu.memoryAddress++
 	}
 
-	return 0
+	return value
 }
 
 /*
@@ -122,14 +94,15 @@ func (ppu *PPU) Write(addr uint16, value uint8) {
 		break
 	case 0x0006: // PPU Address
 		if !ppu.addressLatch {
-			ppu.memoryAddress = uint16(value)
+			ppu.memoryAddress = (ppu.memoryAddress & 0x00FF) | (uint16(value) << 8)
 			ppu.addressLatch = true
 		} else {
-			ppu.memoryAddress = (ppu.memoryAddress << 8) | uint16(value)
+			ppu.memoryAddress = (ppu.memoryAddress & 0xFF00) | uint16(value)
 			ppu.addressLatch = false
 		}
 	case 0x0007: // PPU Data
 		ppu.writeMemory(ppu.memoryAddress, value)
+		ppu.memoryAddress++
 	}
 }
 
@@ -188,5 +161,29 @@ func (ppu *PPU) writeMemory(addr uint16, value uint8) {
 }
 
 func (ppu *PPU) Clock() {
+	// ------------------- //
+	// Pre-render scanline //
+	// ------------------- //
 
+	if ppu.scanline == -1 && ppu.cycle == 1 {
+		ppu.setStatus(StatusVerticalBlank, false)
+	}
+
+	// --------------- //
+	// Render scanline //
+	// --------------- //
+
+	// TODO
+
+	// --------------------- //
+	// Post-render scanlines //
+	// --------------------- //
+
+	if ppu.scanline == 241 && ppu.cycle == 1 {
+		ppu.setStatus(StatusVerticalBlank, true)
+
+		if ppu.getCtrl(CtrlGenerateNMI) {
+			ppu.EmitNMI = true
+		}
+	}
 }
