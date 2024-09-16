@@ -1,11 +1,9 @@
 package cartridge
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
-	"log"
 	"os"
 )
 
@@ -22,80 +20,59 @@ type Header struct {
 	_          [5]uint8 // Unused in iNES 1.0 format
 }
 
-func newHeader(data []uint8) Header {
-	header := Header{}
+type Cartridge struct {
+	pgrBanks   uint8
+	chrBanks   uint8
+	mirrorMode uint8
+	pgrMemory  []uint8
+	chrMemory  []uint8
+	mapper     Mapper
+}
 
-	err := binary.Read(bytes.NewReader(data[:]), binary.BigEndian, &header)
+func NewCartridge(romPath string) (*Cartridge, error) {
+	romFile, err := os.Open(romPath)
 
 	if err != nil {
-		log.Fatalf("Failed to load ROM header data into header type: %s", err)
+		return nil, fmt.Errorf("failed to open ROM file: %s", err)
 	}
 
-	return header
-}
+	defer romFile.Close()
 
-type Cartridge struct {
-	pgrBanks  uint8
-	chrBanks  uint8
-	pgrMemory []uint8
-	chrMemory []uint8
-	mapper    Mapper
-}
+	header := Header{}
 
-func NewCartridge(romPath string) *Cartridge {
+	if err := binary.Read(romFile, binary.LittleEndian, &header); err != nil {
+		return nil, fmt.Errorf("failed to read in header from rom file: %s", err)
+	}
+
 	cartridge := &Cartridge{}
 
-	rom := loadROM(romPath)
-
-	header := newHeader(rom[0x00:0x10])
-
 	mapperID := (header.Mapper1 & 0xF0) | header.Mapper2>>4
-	hasTraining := header.Mapper1>>2&0x01 != 0
+	hasTrainer := header.Mapper1>>2&0x01 != 0
 
 	cartridge.mapper = NewMapper(mapperID, cartridge)
 
-	var trainingOffset uint16
-
-	if hasTraining {
-		trainingOffset = 512
-	} else {
-		trainingOffset = 0
+	if hasTrainer {
+		if _, err = romFile.Seek(512, io.SeekCurrent); err != nil {
+			return nil, fmt.Errorf("failed to skip trainer data: %s", err)
+		}
 	}
 
 	cartridge.pgrBanks = header.PRGSize
 	cartridge.chrBanks = header.CHRSize
 
-	pgrOffset := 0x10 + trainingOffset
-	cartridge.pgrMemory = rom[pgrOffset : uint16(header.PRGSize)*16384]
+	cartridge.pgrMemory = make([]uint8, uint32(cartridge.pgrBanks)*16384)
 
-	chrOffset := pgrOffset + uint16(header.PRGSize)*16384
-	cartridge.chrMemory = rom[chrOffset : uint16(header.CHRSize)*8192]
-
-	return cartridge
-}
-
-func loadROM(romPath string) []uint8 {
-	file, err := os.Open(romPath)
-
-	if err != nil {
-		log.Printf("Failed to open ROM file: %s", err)
+	if _, err := io.ReadFull(romFile, cartridge.pgrMemory); err != nil {
+		return nil, fmt.Errorf("failed to read PRG data into PRG ROM memory: %s", err)
 	}
 
-	stat, err := file.Stat()
+	cartridge.chrMemory = make([]uint8, uint32(cartridge.chrBanks)*8192)
 
-	if err != nil {
-		log.Printf("Failed to retrieve ROM file stats: %s", err)
+	if _, err := io.ReadFull(romFile, cartridge.chrMemory); err != nil {
+		return nil, fmt.Errorf("failed to read CHR data into CHR ROM memory: %s", err)
 	}
 
-	rom := make([]byte, stat.Size())
-
-	_, err = bufio.NewReader(file).Read(rom)
-
-	if err != nil && err != io.EOF {
-		log.Printf("Failed to read file into ROM buffer: %s", err)
-	}
-
-	return rom
+	return cartridge, nil
 }
 
 func (cartridge *Cartridge) PRGRead(addr uint16) uint8 {

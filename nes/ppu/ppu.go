@@ -2,6 +2,9 @@ package ppu
 
 import (
 	"gonesem/nes/cartridge"
+	"image"
+	"image/color"
+	"math/rand"
 )
 
 type PPU struct {
@@ -12,20 +15,30 @@ type PPU struct {
 	scanline int16 // Current display scanline
 	cycle    int16 // Offest into scanline giving current pixel
 
-	memoryAddress uint16 // CPU -> PPU data read/write
+	memoryAddress uint16 // CPU -> PPU data read/write address
 	addressLatch  bool   // HI/LO byte PPU write address latch
 
-	dataBuffer uint8 // Temporary databuffer used in 1-cycle PPU data read delay
+	dataBuffer uint8 // Temporary databuffer used in 1 CPU cycle PPU data read delay
 
 	EmitNMI bool
 
 	nameTable    [2048]uint8
 	paletteTable [32]uint8
+	colorPalette [64]color.RGBA
 	cartridge    *cartridge.Cartridge
+
+	frame         *image.RGBA
+	frameComplete bool
 }
 
-func NewPPU(cartridge *cartridge.Cartridge) *PPU {
-	return &PPU{cartridge: cartridge, addressLatch: false}
+func NewPPU(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *PPU {
+	return &PPU{
+		cartridge:     cartridge,
+		colorPalette:  colorPalette,
+		addressLatch:  false,
+		frameComplete: false,
+		frame:         image.NewRGBA(image.Rect(0, 0, 256, 240)),
+	}
 }
 
 /*
@@ -63,7 +76,7 @@ func (ppu *PPU) Read(addr uint16) uint8 {
 		value = ppu.dataBuffer
 		ppu.dataBuffer = ppu.readMemory(ppu.memoryAddress)
 
-		if ppu.memoryAddress > 0x3F00 {
+		if ppu.memoryAddress >= 0x3F00 {
 			value = ppu.dataBuffer
 		}
 
@@ -145,7 +158,7 @@ func (ppu *PPU) writeMemory(addr uint16, value uint8) {
 	// in cases where the cartridge also contains CHR RAM.
 	case addr <= 0x1FFF:
 		ppu.cartridge.CHRWrite(addr, value)
-	// Palette table address sapce
+	// Name table address sapce
 	case addr >= 0x2000 && addr <= 0x3EFF:
 		ppu.nameTable[addr%2048] = value
 	// Palette table address sapce
@@ -161,6 +174,10 @@ func (ppu *PPU) writeMemory(addr uint16, value uint8) {
 }
 
 func (ppu *PPU) Clock() {
+	if (ppu.scanline >= 0 && ppu.scanline < 240) && (ppu.cycle >= 1 || ppu.cycle <= 256) {
+		ppu.frame.Set(int(ppu.cycle), int(ppu.scanline), ppu.colorPalette[rand.Intn(len(ppu.colorPalette))])
+	}
+
 	// ------------------- //
 	// Pre-render scanline //
 	// ------------------- //
@@ -186,4 +203,27 @@ func (ppu *PPU) Clock() {
 			ppu.EmitNMI = true
 		}
 	}
+
+	ppu.cycle++
+
+	if ppu.cycle >= 341 {
+		ppu.cycle = 0
+
+		ppu.scanline++
+
+		if ppu.scanline >= 261 {
+			ppu.scanline = -1
+			ppu.frameComplete = true
+		}
+	}
+}
+
+func (ppu *PPU) IsFrameComplete() bool {
+	return ppu.frameComplete
+}
+
+func (ppu *PPU) GetFrame() *image.RGBA {
+	ppu.frameComplete = false
+
+	return ppu.frame
 }

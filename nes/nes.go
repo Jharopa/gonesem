@@ -4,6 +4,8 @@ import (
 	"gonesem/nes/cartridge"
 	"gonesem/nes/cpu"
 	"gonesem/nes/ppu"
+	"image"
+	"image/color"
 )
 
 type NES struct {
@@ -16,11 +18,11 @@ type NES struct {
 	TotalCycles uint64
 }
 
-func NewNES(cartridge *cartridge.Cartridge) *NES {
-	nes := &NES{TotalCycles: 0}
+func NewNES(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *NES {
+	nes := &NES{cartridge: cartridge, TotalCycles: 0}
 
 	cpu := cpu.NewCPU(nes)
-	ppu := ppu.NewPPU(cartridge)
+	ppu := ppu.NewPPU(cartridge, colorPalette)
 
 	nes.cpu = cpu
 	nes.ppu = ppu
@@ -63,4 +65,14 @@ func (nes *NES) Clock() {
 	}
 
 	nes.TotalCycles++
+}
+
+func (nes *NES) NextFrame() {
+	for !nes.ppu.IsFrameComplete() {
+		nes.Clock()
+	}
+}
+
+func (nes *NES) GetFrame() *image.RGBA {
+	return nes.ppu.GetFrame()
 }
