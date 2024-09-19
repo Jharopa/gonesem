@@ -1,3 +1,3 @@
 # gonesem
 
-WIP Nintendo Entertainment System written in Golang + OpenGL
+WIP Nintendo Entertainment System Emulator written in Golang + OpenGL
