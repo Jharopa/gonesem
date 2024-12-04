@@ -68,11 +68,17 @@ func (nes *NES) Clock() {
 }
 
 func (nes *NES) NextFrame() {
-	for !nes.ppu.IsFrameComplete() {
+	frameCount := nes.ppu.GetFrameCount()
+
+	for frameCount == nes.ppu.GetFrameCount() {
 		nes.Clock()
 	}
 }
 
 func (nes *NES) GetFrame() *image.RGBA {
 	return nes.ppu.GetFrame()
+}
+
+func (nes *NES) GetPatternTable(tableIndex uint8, paletteIndex uint8) *image.RGBA {
+	return nes.ppu.GetPatternTable(tableIndex, paletteIndex)
 }

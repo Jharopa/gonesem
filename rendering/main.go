@@ -52,19 +52,19 @@ var (
 	quad = []float32{
 		// Top Left
 		-1.0, 1.0, 0.0, // Position
-		1.0, 0.0, // Texture Coordinates
+		0.0, 1.0, // Texture Coordinates
 
 		// Top Right
 		1.0, 1.0, 0.0,
-		0.0, 0.0,
+		1.0, 1.0,
 
 		// Bottom Right
 		1.0, -1.0, 0.0,
-		0.0, 1.0,
+		1.0, 0.0,
 
 		// Bottom Left
 		-1.0, -1.0, 0.0,
-		1.0, 1.0,
+		0.0, 0.0,
 	}
 )
 
@@ -113,11 +113,11 @@ func main() {
 
 	gl.ClearColor(0, 0, 0, 1)
 
-	timestamp := glfw.GetTime()
 	residualTime := 0.0
+	deltaTime := 0.0
 
 	for !window.ShouldClose() {
-		deltaTime := glfw.GetTime() - timestamp
+		startTime := glfw.GetTime()
 
 		if residualTime > 0 {
 			residualTime -= deltaTime
@@ -141,18 +141,18 @@ func main() {
 			glfw.PollEvents()
 		}
 
-		timestamp = glfw.GetTime()
+		deltaTime := glfw.GetTime() - startTime
 	}
 }
 
 func nesInit() (*nes.NES, error) {
-	cartridge, err := cartridge.NewCartridge("../test/data/roms/Donkey Kong.nes")
+	cartridge, err := cartridge.NewCartridge("../test/data/nestest.nes")
 
 	if err != nil {
 		return nil, err
 	}
 
-	colorPalette, err := color.NewColorPalette("../test/data/pals/NESdev.pal")
+	colorPalette, err := color.NewColorPalette("../test/data/pals/Nintendulator.pal")
 
 	if err != nil {
 		return nil, err

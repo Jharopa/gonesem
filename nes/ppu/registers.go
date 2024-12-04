@@ -13,8 +13,8 @@ const (
 	CtrlSpriteTableAddress                     // S 0: Address $0000; 1: Address $1000; ignore in 8x16
 	CtrlBackgroundTableAddres                  // B 0: Address $0000; 1: Address $1000
 	CtrlSpriteSize                             // H 0: 8x8 pixles; 1: 8x16 pixels
-	CtrlMasterSlaveMode                        // P 0: read backfrop from EXT pins; 1: output color on EXT pins
-	CtrlGenerateNMI                            // V 0: off; 1: on
+	CtrlMasterSlaveMode                        // P 0: read backdrop from EXT pins; 1: output color on EXT pins
+	CtrlGenerateNMI                            // V VBlank NMI enabled 0: off; 1: on
 )
 
 const (

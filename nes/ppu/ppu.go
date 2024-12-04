@@ -27,17 +27,17 @@ type PPU struct {
 	colorPalette [64]color.RGBA
 	cartridge    *cartridge.Cartridge
 
-	frame         *image.RGBA
-	frameComplete bool
+	frame      *image.RGBA
+	frameCount uint64
 }
 
 func NewPPU(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *PPU {
 	return &PPU{
-		cartridge:     cartridge,
-		colorPalette:  colorPalette,
-		addressLatch:  false,
-		frameComplete: false,
-		frame:         image.NewRGBA(image.Rect(0, 0, 256, 240)),
+		cartridge:    cartridge,
+		colorPalette: colorPalette,
+		addressLatch: false,
+		frameCount:   0,
+		frame:        image.NewRGBA(image.Rect(0, 0, 256, 240)),
 	}
 }
 
@@ -97,7 +97,7 @@ func (ppu *PPU) Write(addr uint16, value uint8) {
 		ppu.ctrl = Ctrl(value)
 	case 0x0001: // Mask
 		ppu.mask = Mask(value)
-	case 0x0002: // Status
+	case 0x0002: // Status - Non-writable
 		break
 	case 0x0003: // OAM Address
 		break
@@ -174,6 +174,11 @@ func (ppu *PPU) writeMemory(addr uint16, value uint8) {
 }
 
 func (ppu *PPU) Clock() {
+
+	// ---------------- //
+	// Noise generation //
+	// ---------------- //
+
 	if (ppu.scanline >= 0 && ppu.scanline < 240) && (ppu.cycle >= 1 || ppu.cycle <= 256) {
 		ppu.frame.Set(int(ppu.cycle), int(ppu.scanline), ppu.colorPalette[rand.Intn(len(ppu.colorPalette))])
 	}
@@ -183,6 +188,7 @@ func (ppu *PPU) Clock() {
 	// ------------------- //
 
 	if ppu.scanline == -1 && ppu.cycle == 1 {
+		ppu.frameCount++
 		ppu.setStatus(StatusVerticalBlank, false)
 	}
 
@@ -213,17 +219,44 @@ func (ppu *PPU) Clock() {
 
 		if ppu.scanline >= 261 {
 			ppu.scanline = -1
-			ppu.frameComplete = true
 		}
 	}
 }
 
-func (ppu *PPU) IsFrameComplete() bool {
-	return ppu.frameComplete
+func (ppu *PPU) GetFrameCount() uint64 {
+	return ppu.frameCount
 }
 
 func (ppu *PPU) GetFrame() *image.RGBA {
-	ppu.frameComplete = false
-
 	return ppu.frame
+}
+
+func (ppu *PPU) GetPatternTable(tableIndex uint8, paletteIndex uint8) *image.RGBA {
+	var x, y, row, col uint16
+	patternTableImage := image.NewRGBA(image.Rect(0, 0, 128, 128))
+
+	for y = 0; y < 16; y++ {
+		for x = 0; x < 16; x++ {
+			tileOffset := y*256 + x*16
+
+			for row = 0; row < 8; row++ {
+				tileLSB := ppu.readMemory(uint16(tableIndex)*0x1000 + tileOffset + row)
+				tileMSB := ppu.readMemory(uint16(tableIndex)*0x1000 + tileOffset + row + 8)
+
+				for col = 0; col < 8; col++ {
+					pixel := (tileLSB & 0x01) + (tileMSB & 0x01)
+					tileLSB >>= 1
+					tileMSB >>= 1
+
+					patternTableImage.Set(
+						int(x*8+(7-col)),
+						int(y*8+row),
+						ppu.colorPalette[ppu.readMemory(0x3F00+uint16(paletteIndex<<2)+uint16(pixel))&0x3F],
+					)
+				}
+			}
+		}
+	}
+
+	return patternTableImage
 }
