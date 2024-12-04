@@ -141,7 +141,7 @@ func main() {
 			glfw.PollEvents()
 		}
 
-		deltaTime := glfw.GetTime() - startTime
+		deltaTime = glfw.GetTime() - startTime
 	}
 }
 
