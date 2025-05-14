@@ -17,23 +17,6 @@ const (
 	CtrlGenerateNMI                            // V VBlank NMI enabled 0: off; 1: on
 )
 
-const (
-	MaskGreyscale          Mask = 1 << iota // g
-	MaskShowBackgroundLeft                  // m Show background in the leftmost 8 pixles of screen
-	MaskShowSpritesLeft                     // M Show sprites in the leftmost 8 pixles of screen
-	MaskShowBackground                      // b
-	MaskShowSprites                         // s
-	MaskEmphasizeRed                        // R
-	MaskEmphasizeGreen                      // G
-	MaskEmphasizeBlue                       // B
-)
-
-const (
-	StatusOpenBus       Status = 1 << 5 // O
-	StatusSpriteZeroHit Status = 1 << 6 // S
-	StatusVerticalBlank Status = 1 << 7 // V
-)
-
 func (ppu *PPU) setCtrl(ctrl Ctrl, value bool) {
 	if value {
 		ppu.ctrl |= ctrl
@@ -46,6 +29,17 @@ func (ppu *PPU) getCtrl(ctrl Ctrl) bool {
 	return (ppu.ctrl & ctrl) != 0
 }
 
+const (
+	MaskGreyscale          Mask = 1 << iota // g
+	MaskShowBackgroundLeft                  // m Show background in the leftmost 8 pixles of screen
+	MaskShowSpritesLeft                     // M Show sprites in the leftmost 8 pixles of screen
+	MaskShowBackground                      // b
+	MaskShowSprites                         // s
+	MaskEmphasizeRed                        // R
+	MaskEmphasizeGreen                      // G
+	MaskEmphasizeBlue                       // B
+)
+
 func (ppu *PPU) setMask(mask Mask, value bool) {
 	if value {
 		ppu.mask |= mask
@@ -57,6 +51,12 @@ func (ppu *PPU) setMask(mask Mask, value bool) {
 func (ppu *PPU) getMask(mask Mask) bool {
 	return (ppu.mask & mask) != 0
 }
+
+const (
+	StatusOpenBus       Status = 1 << 5 // O
+	StatusSpriteZeroHit Status = 1 << 6 // S
+	StatusVerticalBlank Status = 1 << 7 // V
+)
 
 func (ppu *PPU) setStatus(status Status, value bool) {
 	if value {

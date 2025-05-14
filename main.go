@@ -29,7 +29,7 @@ func nesInit() (*nes.NES, error) {
 		return nil, err
 	}
 
-	colorPalette, err := color.NewColorPalette("./test/data/pals/NESdev.pal")
+	colorPalette, err := color.NewColorPalette("./test/data/pals/Nintendulator.pal")
 
 	if err != nil {
 		return nil, err

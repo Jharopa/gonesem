@@ -3,6 +3,7 @@ package cartridge
 import (
 	"encoding/binary"
 	"fmt"
+	"gonesem/nes/memory"
 	"io"
 	"os"
 )
@@ -23,7 +24,7 @@ type Header struct {
 type Cartridge struct {
 	pgrBanks   uint8
 	chrBanks   uint8
-	mirrorMode uint8
+	mirrorMode memory.MirrorMode
 	pgrMemory  []uint8
 	chrMemory  []uint8
 	mapper     Mapper
@@ -33,7 +34,7 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 	romFile, err := os.Open(romPath)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to open ROM file: %s", err)
+		return nil, fmt.Errorf("failed to open ROM file %s", err)
 	}
 
 	defer romFile.Close()
@@ -41,10 +42,12 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 	header := Header{}
 
 	if err := binary.Read(romFile, binary.LittleEndian, &header); err != nil {
-		return nil, fmt.Errorf("failed to read in header from rom file: %s", err)
+		return nil, fmt.Errorf("failed to read in header from rom file %s", err)
 	}
 
 	cartridge := &Cartridge{}
+
+	cartridge.mirrorMode = memory.MirrorMode(header.Mapper1 & 0x01)
 
 	mapperID := (header.Mapper1 & 0xF0) | header.Mapper2>>4
 	hasTrainer := header.Mapper1>>2&0x01 != 0
@@ -53,7 +56,7 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 
 	if hasTrainer {
 		if _, err = romFile.Seek(512, io.SeekCurrent); err != nil {
-			return nil, fmt.Errorf("failed to skip trainer data: %s", err)
+			return nil, fmt.Errorf("failed to skip trainer data %s", err)
 		}
 	}
 
@@ -63,13 +66,13 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 	cartridge.pgrMemory = make([]uint8, uint32(cartridge.pgrBanks)*16384)
 
 	if _, err := io.ReadFull(romFile, cartridge.pgrMemory); err != nil {
-		return nil, fmt.Errorf("failed to read PRG data into PRG ROM memory: %s", err)
+		return nil, fmt.Errorf("failed to read PRG data into PRG ROM memory %s", err)
 	}
 
 	cartridge.chrMemory = make([]uint8, uint32(cartridge.chrBanks)*8192)
 
 	if _, err := io.ReadFull(romFile, cartridge.chrMemory); err != nil {
-		return nil, fmt.Errorf("failed to read CHR data into CHR ROM memory: %s", err)
+		return nil, fmt.Errorf("failed to read CHR data into CHR ROM memory %s", err)
 	}
 
 	return cartridge, nil
@@ -89,4 +92,8 @@ func (cartridge *Cartridge) CHRRead(addr uint16) uint8 {
 
 func (cartridge *Cartridge) CHRWrite(addr uint16, value uint8) {
 	cartridge.mapper.CHRWrite(addr, value)
+}
+
+func (cartidge *Cartridge) MirrorMode() memory.MirrorMode {
+	return cartidge.mirrorMode
 }

@@ -131,7 +131,7 @@ func main() {
 			gl.ActiveTexture(gl.TEXTURE0)
 			gl.BindTexture(gl.TEXTURE_2D, texture)
 
-			setFrameTexture(nes.GetFrame())
+			setFrameTexture(nes.GetPatternTable(1, 3))
 
 			gl.BindVertexArray(vao)
 			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
