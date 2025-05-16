@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/go-gl/gl/v4.6-core/gl"
@@ -113,39 +114,31 @@ func main() {
 
 	gl.ClearColor(0, 0, 0, 1)
 
-	residualTime := 0.0
-	deltaTime := 0.0
-
 	for !window.ShouldClose() {
-		startTime := glfw.GetTime()
+		start := time.Now()
 
-		if residualTime > 0 {
-			residualTime -= deltaTime
-		} else {
-			residualTime += fps - deltaTime
+		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-			gl.Clear(gl.COLOR_BUFFER_BIT)
-
-			for !nes.FrameComplete() {
-				nes.Clock()
-			}
-
-			nes.ResetFrameComplete()
-
-			gl.ActiveTexture(gl.TEXTURE0)
-			gl.BindTexture(gl.TEXTURE_2D, texture)
-
-			setFrameTexture(nes.GetFrame())
-
-			gl.BindVertexArray(vao)
-			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
-			gl.BindVertexArray(0)
-
-			window.SwapBuffers()
-			glfw.PollEvents()
+		for !nes.FrameComplete() {
+			nes.Clock()
 		}
+		nes.ResetFrameComplete()
 
-		deltaTime = glfw.GetTime() - startTime
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, texture)
+
+		setFrameTexture(nes.GetFrame())
+
+		gl.BindVertexArray(vao)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
+		gl.BindVertexArray(0)
+
+		window.SwapBuffers()
+		glfw.PollEvents()
+
+		deltaTime := time.Since(start)
+
+		time.Sleep(time.Microsecond*16666 - deltaTime)
 	}
 }
 
