@@ -126,12 +126,16 @@ func main() {
 
 			gl.Clear(gl.COLOR_BUFFER_BIT)
 
-			nes.NextFrame()
+			for !nes.FrameComplete() {
+				nes.Clock()
+			}
+
+			nes.ResetFrameComplete()
 
 			gl.ActiveTexture(gl.TEXTURE0)
 			gl.BindTexture(gl.TEXTURE_2D, texture)
 
-			setFrameTexture(nes.GetPatternTable(1, 3))
+			setFrameTexture(nes.GetFrame())
 
 			gl.BindVertexArray(vao)
 			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
@@ -146,7 +150,7 @@ func main() {
 }
 
 func nesInit() (*nes.NES, error) {
-	cartridge, err := cartridge.NewCartridge("../test/data/nestest.nes")
+	cartridge, err := cartridge.NewCartridge("../test/data/roms/Donkey Kong.nes")
 
 	if err != nil {
 		return nil, err
