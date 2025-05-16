@@ -35,7 +35,7 @@ func (nes *NES) Read(addr uint16) uint8 {
 	case addr <= 0x1FFF:
 		return nes.ram[addr%0x0800]
 	case addr >= 0x2000 && addr <= 0x3FFF:
-		return nes.ppu.Read(addr % 0x0008)
+		return nes.ppu.CPURead(addr % 0x0008)
 	default:
 		return nes.cartridge.PRGRead(addr)
 	}
@@ -46,7 +46,7 @@ func (nes *NES) Write(addr uint16, value uint8) {
 	case addr <= 0x1FFF:
 		nes.ram[addr%0x0800] = value
 	case addr >= 0x2000 && addr <= 0x3FFF:
-		nes.ppu.Write(addr%0x0008, value)
+		nes.ppu.CPUWrite(addr%0x0008, value)
 	default:
 		nes.cartridge.PRGWrite(addr, value)
 	}
@@ -67,12 +67,12 @@ func (nes *NES) Clock() {
 	nes.TotalCycles++
 }
 
-func (nes *NES) NextFrame() {
-	frameCount := nes.ppu.GetFrameCount()
+func (nes *NES) FrameComplete() bool {
+	return nes.ppu.FrameComplete
+}
 
-	for frameCount == nes.ppu.GetFrameCount() {
-		nes.Clock()
-	}
+func (nes *NES) ResetFrameComplete() {
+	nes.ppu.FrameComplete = false
 }
 
 func (nes *NES) GetFrame() *image.RGBA {
