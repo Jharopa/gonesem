@@ -16,6 +16,13 @@ type NES struct {
 	ram [2048]uint8
 
 	TotalCycles uint64
+
+	dmaPage uint8
+	dmaAddr uint8
+	dmaData uint8
+
+	dmaTransfer bool
+	dmaDummy    bool
 }
 
 func NewNES(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *NES {
@@ -47,6 +54,10 @@ func (nes *NES) Write(addr uint16, value uint8) {
 		nes.ram[addr%0x0800] = value
 	case addr >= 0x2000 && addr <= 0x3FFF:
 		nes.ppu.CPUWrite(addr%0x0008, value)
+	case addr == 0x4014:
+		nes.dmaPage = value
+		nes.dmaAddr = 0x00
+		nes.dmaTransfer = true
 	default:
 		nes.cartridge.PRGWrite(addr, value)
 	}
@@ -56,7 +67,27 @@ func (nes *NES) Clock() {
 	nes.ppu.Clock()
 
 	if nes.TotalCycles%3 == 0 {
-		nes.cpu.Clock()
+		if nes.dmaTransfer {
+			if nes.dmaDummy {
+				if nes.TotalCycles%2 == 1 {
+					nes.dmaDummy = false
+				}
+			} else {
+				if nes.TotalCycles%2 == 0 {
+					addr := uint16(nes.dmaPage)<<8 | uint16(nes.dmaAddr)
+					nes.dmaData = nes.Read(addr)
+				} else {
+					nes.ppu.TransferDMAData(nes.dmaAddr, nes.dmaData)
+
+					if nes.dmaData == 0x00 {
+						nes.dmaTransfer = false
+						nes.dmaDummy = true
+					}
+				}
+			}
+		} else {
+			nes.cpu.Clock()
+		}
 	}
 
 	if nes.ppu.EmitNMI {

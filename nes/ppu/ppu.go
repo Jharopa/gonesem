@@ -31,6 +31,8 @@ type PPU struct {
 
 	dataBuffer uint8 // Temporary databuffer used in 1 CPU cycle PPU data read delay
 
+	oamAddr uint8
+
 	nameTableByte        uint8
 	attributeTableByte   uint8
 	patternTableByteLow  uint8
@@ -45,6 +47,7 @@ type PPU struct {
 
 	nameTable    [2048]uint8
 	paletteTable [32]uint8
+	oamData      [256]byte
 	colorPalette [64]color.RGBA
 	cartridge    *cartridge.Cartridge
 
@@ -87,7 +90,7 @@ func (ppu *PPU) CPURead(addr uint16) uint8 {
 	case 0x0003: // OAMADDR $2003
 		break
 	case 0x0004: // OAMDATA $2004
-		break
+		value = ppu.oamData[ppu.oamAddr]
 	case 0x0005: // PPUSCROLL $2005
 		break
 	case 0x0006: // PPUADDR $2006
@@ -120,9 +123,9 @@ func (ppu *PPU) CPUWrite(addr uint16, value uint8) {
 	case 0x0002: // PPUSTATUS $2002
 		break
 	case 0x0003: // OAMADDR $2003
-		break
+		ppu.oamAddr = value
 	case 0x0004: // OAMDATA $2004
-		break
+		ppu.oamData[ppu.oamAddr] = value
 	case 0x0005: // PPUSCROLL $2005
 		if !ppu.addressLatch {
 			ppu.tramAddr = (ppu.tramAddr & 0xFFE0) | uint16(value)>>3
@@ -148,6 +151,10 @@ func (ppu *PPU) CPUWrite(addr uint16, value uint8) {
 	}
 }
 
+func (ppu *PPU) TransferDMAData(addr uint8, value uint8) {
+	ppu.oamData[addr] = value
+}
+
 /*
 Increments the PPU's memory address by 32 if the Ctrl register's increment mode bit is set;
 otherwise it will increment the PPU's memory address by 1
@@ -162,7 +169,7 @@ func (ppu *PPU) incrementAddress() {
 
 /*
 Used for reading from PPU's internal video memory, used in conjunction with
-writeMemory method to represent the PPU's internal bus and the memory available on that.
+write method to represent the PPU's internal bus and the memory available on that.
 */
 func (ppu *PPU) read(addr uint16) uint8 {
 	switch {
@@ -477,8 +484,6 @@ func (ppu *PPU) Clock() {
 		}
 
 		backgroundPalette = (uint8(paletteHigh) << 1) | uint8(paletteLow)
-
-		// fmt.Printf("Scanline: %d - Cycle: %d Pixel: %d Palette: %d\n", ppu.scanline, ppu.cycle, backgroundPixel, backgroundPalette)
 	}
 
 	ppu.frame.Set(
