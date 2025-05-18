@@ -61,12 +61,12 @@ func (ppu *PPU) getSpritePatterns() {
 		if ppu.getSpriteHeight() == 0x08 {
 			patternTableAddr := ppu.getSpritePatternTableAddress()
 			patternTableIdx := uint16(ppu.spriteScanlinePattern[i]) << 4
-			row := uint16(ppu.scanline - int16(ppu.spriteScanlineY[i]))
+			row := uint16(int16(ppu.scanline) - int16(ppu.spriteScanlineY[i]))
 
 			if (ppu.spriteScanlineAttributes[i] & 0x80) != 0x80 { // Sprite is not flipped veritcally
-				spritePatternAddrLow = patternTableAddr + patternTableIdx + row
+				spritePatternAddrLow = patternTableAddr | patternTableIdx | row
 			} else { // Sprite is flipped veritcally
-				spritePatternAddrLow = patternTableAddr + patternTableIdx + (7 - row)
+				spritePatternAddrLow = patternTableAddr | patternTableIdx | (7 - row)
 			}
 		} else { // 8x16 Sprite Mode
 			patternTableAddr := uint16(ppu.spriteScanlinePattern[i]&0x01) << 12
@@ -75,15 +75,15 @@ func (ppu *PPU) getSpritePatterns() {
 
 			if (ppu.spriteScanlineAttributes[i] & 0x80) != 0x80 { // Sprite is not flipped veritcally
 				if ppu.scanline-int16(ppu.spriteScanlineY[i]) < 8 {
-					spritePatternAddrLow = patternTableAddr + (patternTableIdx << 4) + row
+					spritePatternAddrLow = patternTableAddr | (patternTableIdx << 4) | row
 				} else {
-					spritePatternAddrLow = patternTableAddr + ((patternTableIdx + 1) << 4) + row
+					spritePatternAddrLow = patternTableAddr | ((patternTableIdx + 1) << 4) | row
 				}
 			} else { // Sprite is flipped veritcally
 				if ppu.scanline-int16(ppu.spriteScanlineY[i]) < 8 {
-					spritePatternAddrLow = patternTableAddr + (patternTableIdx << 4) + (7 - row)
+					spritePatternAddrLow = patternTableAddr | (patternTableIdx << 4) | (7 - row)
 				} else {
-					spritePatternAddrLow = patternTableAddr + (patternTableIdx+1)<<4 + (7 - row)
+					spritePatternAddrLow = patternTableAddr | (patternTableIdx+1)<<4 | (7 - row)
 				}
 			}
 		}
