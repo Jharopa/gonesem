@@ -43,13 +43,22 @@ type PPU struct {
 	attributeShiftResgisterLow  uint16
 	attributeShiftResgisterHigh uint16
 
+	spriteScanlineY                 [8]uint8
+	spriteScanlinePattern           [8]uint8
+	spriteScanlineAttributes        [8]uint8
+	spriteScanlineX                 [8]uint8
+	spriteCount                     uint8
+	spritePatternShiftRegistersLow  [8]uint8
+	spritePatternShiftRegistersHigh [8]uint8
+
 	EmitNMI bool
 
 	nameTable    [2048]uint8
 	paletteTable [32]uint8
-	oamData      [256]byte
+	oamData      [256]uint8
 	colorPalette [64]color.RGBA
-	cartridge    *cartridge.Cartridge
+
+	cartridge *cartridge.Cartridge
 
 	frame         *image.RGBA
 	FrameComplete bool
@@ -322,7 +331,7 @@ func (ppu *PPU) getPatternTableByte(low bool) uint8 {
 		address     uint16
 	)
 
-	if !ppu.getCtrl(CtrlBackgroundTableAddres) {
+	if !ppu.getCtrl(CtrlBackgroundTableAddress) {
 		tableIdx = 0
 	} else {
 		tableIdx = 1
@@ -370,12 +379,23 @@ func (ppu *PPU) loadShiftRegisters() {
 }
 
 func (ppu *PPU) updateShiftRegisters() {
-	if ppu.getMask(MaskShowBackground) || ppu.getMask(MaskShowSprites) {
+	if ppu.getMask(MaskShowBackground) {
 		ppu.patternShiftResgisterLow <<= 1
 		ppu.patternShiftResgisterHigh <<= 1
 
 		ppu.attributeShiftResgisterLow <<= 1
 		ppu.attributeShiftResgisterHigh <<= 1
+	}
+
+	if ppu.getMask(MaskShowSprites) && ppu.cycle >= 1 && ppu.cycle < 258 {
+		for i := range ppu.spriteCount {
+			if ppu.spriteScanlineX[i] > 0 {
+				ppu.spriteScanlineX[i]--
+			} else {
+				ppu.spritePatternShiftRegistersLow[i] <<= 1
+				ppu.spritePatternShiftRegistersHigh[i] <<= 1
+			}
+		}
 	}
 }
 
@@ -397,8 +417,17 @@ func (ppu *PPU) Clock() {
 
 		if ppu.scanline == -1 && ppu.cycle == 1 {
 			ppu.setStatus(StatusVerticalBlank, false)
+			ppu.setStatus(StatusSpriteOverflow, false)
+
+			for i := range 8 {
+				ppu.spritePatternShiftRegistersLow[i] = 0
+				ppu.spritePatternShiftRegistersHigh[i] = 0
+			}
 		}
 
+		// -------------------- //
+		// Background Rendering //
+		// -------------------- //
 		if (ppu.cycle >= 2 && ppu.cycle < 258) || (ppu.cycle >= 321 && ppu.cycle < 338) {
 			ppu.updateShiftRegisters()
 
@@ -433,6 +462,17 @@ func (ppu *PPU) Clock() {
 		if ppu.scanline == -1 && ppu.cycle >= 280 && ppu.cycle < 305 {
 			ppu.copyAddressY()
 		}
+
+		// -------------------- //
+		// Foreground Rendering //
+		// -------------------- //
+		if ppu.cycle == 257 && ppu.scanline >= 0 {
+			ppu.evaluateSprites()
+		}
+
+		if ppu.cycle == 340 {
+			ppu.getSpritePatterns()
+		}
 	}
 
 	if ppu.scanline == 241 && ppu.cycle == 1 {
@@ -443,6 +483,9 @@ func (ppu *PPU) Clock() {
 		}
 	}
 
+	// -------------------- //
+	// Background Rendering //
+	// -------------------- //
 	var (
 		backgroundPixel   uint8
 		backgroundPalette uint8
@@ -451,10 +494,10 @@ func (ppu *PPU) Clock() {
 	if ppu.getMask(MaskShowBackground) {
 		var (
 			bitMux      uint16 = 0x8000 >> ppu.fineX
-			pixelLow    uint16
-			pixelHigh   uint16
-			paletteLow  uint16
-			paletteHigh uint16
+			pixelLow    uint8
+			pixelHigh   uint8
+			paletteLow  uint8
+			paletteHigh uint8
 		)
 
 		if (ppu.patternShiftResgisterLow & bitMux) > 0 {
@@ -469,7 +512,7 @@ func (ppu *PPU) Clock() {
 			pixelHigh = 0
 		}
 
-		backgroundPixel = (uint8(pixelHigh) << 1) | uint8(pixelLow)
+		backgroundPixel = uint8((pixelHigh << 1) | pixelLow)
 
 		if (ppu.attributeShiftResgisterLow & bitMux) > 0 {
 			paletteLow = 1
@@ -483,13 +526,91 @@ func (ppu *PPU) Clock() {
 			paletteHigh = 0
 		}
 
-		backgroundPalette = (uint8(paletteHigh) << 1) | uint8(paletteLow)
+		backgroundPalette = uint8((paletteHigh << 1) | paletteLow)
+	}
+
+	// -------------------- //
+	// Foreground Rendering //
+	// -------------------- //
+	var (
+		foregroundPixel    uint8
+		foregroundPalette  uint8
+		foregroundPriority uint8
+	)
+
+	if ppu.getMask(MaskShowSprites) {
+		var (
+			pixelLow  uint8
+			pixelHigh uint8
+		)
+
+		for i := range ppu.spriteCount {
+			if ppu.spriteScanlineX[i] == 0 {
+				if (ppu.spritePatternShiftRegistersLow[i] & 0x80) > 0 {
+					pixelLow = 1
+				} else {
+					pixelLow = 0
+				}
+
+				if (ppu.spritePatternShiftRegistersHigh[i] & 0x80) > 0 {
+					pixelHigh = 1
+				} else {
+					pixelHigh = 0
+				}
+
+				foregroundPixel = (pixelHigh << 1) | pixelLow
+
+				foregroundPalette = (ppu.spriteScanlineAttributes[i] & 0x03) + 0x04
+
+				if (ppu.spriteScanlineAttributes[i] & 0x20) == 0 {
+					foregroundPriority = 1
+				} else {
+					foregroundPriority = 0
+				}
+
+				if foregroundPixel != 0 {
+					break
+				}
+			}
+		}
+	}
+
+	var (
+		pixel   uint8
+		palette uint8
+	)
+
+	if backgroundPixel == 0 && foregroundPixel == 0 {
+		// Neither the background nor the foreground have visible pixel
+		// Draw the palette's transparent background colour
+		pixel = 0x00
+		palette = 0x00
+	} else if backgroundPixel == 0 && foregroundPixel > 0 {
+		// The background pixel is transparent while The foregound pixel is visible
+		// Draw the foreground pixel and palette
+		pixel = foregroundPixel
+		palette = foregroundPalette
+	} else if backgroundPixel > 0 && foregroundPixel == 0 {
+		// The background pixel is visible  while the foregound pixel is transparent
+		// Draw the background pixel and palette
+		pixel = backgroundPixel
+		palette = backgroundPalette
+	} else if backgroundPixel > 0 && foregroundPixel > 0 {
+		// Both the background and foreground pixels are visisble
+		// Draw pixel based on priority
+		if foregroundPriority == 1 {
+			pixel = foregroundPixel
+			palette = foregroundPalette
+		} else {
+			pixel = backgroundPixel
+			palette = backgroundPalette
+		}
 	}
 
 	ppu.frame.Set(
-		int(ppu.cycle),
+		int(ppu.cycle-1),
 		int(ppu.scanline),
-		ppu.getColourFromPaletteMemory(backgroundPalette, backgroundPixel),
+		ppu.getColourFromPaletteMemory(palette, pixel),
 	)
 
 	ppu.cycle++
@@ -523,7 +644,7 @@ func (ppu *PPU) GetPatternTable(tableIndex uint8, paletteIndex uint8) *image.RGB
 				tileMSB := ppu.read(uint16(tableIndex)*0x1000 + tileOffset + row + 8)
 
 				for col = 0; col < 8; col++ {
-					pixel := (tileLSB & 0x01) + ((tileMSB & 0x01) << 1)
+					pixel := (tileLSB & 0x01 << 1) | ((tileMSB & 0x01) << 1)
 					tileLSB >>= 1
 					tileMSB >>= 1
 

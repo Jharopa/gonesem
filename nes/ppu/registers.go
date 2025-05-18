@@ -7,14 +7,14 @@ type (
 )
 
 const (
-	CtrlNametableAddressX     Ctrl = 1 << iota // N 1: Add 256 to X scroll position
-	CtrlNametableAddressY                      // N 1: Add 240 to Y scroll position
-	CtrlIncrementMode                          // I 0: Add 1 across; 1: Add 32 down
-	CtrlSpriteTableAddress                     // S 0: Address $0000; 1: Address $1000; ignore in 8x16
-	CtrlBackgroundTableAddres                  // B 0: Address $0000; 1: Address $1000
-	CtrlSpriteSize                             // H 0: 8x8 pixles; 1: 8x16 pixels
-	CtrlMasterSlaveMode                        // P 0: read backdrop from EXT pins; 1: output color on EXT pins
-	CtrlGenerateNMI                            // V VBlank NMI enabled 0: off; 1: on
+	CtrlNametableAddressX      Ctrl = 1 << iota // N 1: Add 256 to X scroll position
+	CtrlNametableAddressY                       // N 1: Add 240 to Y scroll position
+	CtrlIncrementMode                           // I 0: Add 1 across; 1: Add 32 down
+	CtrlSpriteTableAddress                      // S 0: Address $0000; 1: Address $1000; ignore in 8x16
+	CtrlBackgroundTableAddress                  // B 0: Address $0000; 1: Address $1000
+	CtrlSpriteSize                              // H 0: 8x8 pixles; 1: 8x16 pixels
+	CtrlMasterSlaveMode                         // P 0: read backdrop from EXT pins; 1: output color on EXT pins
+	CtrlGenerateNMI                             // V VBlank NMI enabled 0: off; 1: on
 )
 
 func (ppu *PPU) setCtrl(ctrl Ctrl, value bool) {
@@ -53,9 +53,9 @@ func (ppu *PPU) getMask(mask Mask) bool {
 }
 
 const (
-	StatusOpenBus       Status = 1 << 5 // O
-	StatusSpriteZeroHit Status = 1 << 6 // S
-	StatusVerticalBlank Status = 1 << 7 // V
+	StatusSpriteOverflow Status = 1 << 5 // O
+	StatusSpriteZeroHit  Status = 1 << 6 // S
+	StatusVerticalBlank  Status = 1 << 7 // V
 )
 
 func (ppu *PPU) setStatus(status Status, value bool) {

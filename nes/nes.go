@@ -15,24 +15,29 @@ type NES struct {
 
 	ram [2048]uint8
 
-	TotalCycles uint64
-
 	dmaPage uint8
 	dmaAddr uint8
 	dmaData uint8
 
 	dmaTransfer bool
 	dmaDummy    bool
+
+	TotalCycles uint64
 }
 
 func NewNES(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *NES {
-	nes := &NES{cartridge: cartridge, TotalCycles: 0}
+	nes := &NES{
+		cartridge:   cartridge,
+		dmaPage:     0,
+		dmaAddr:     0,
+		dmaData:     0,
+		dmaTransfer: false,
+		dmaDummy:    true,
+		TotalCycles: 0,
+	}
 
-	cpu := cpu.NewCPU(nes)
-	ppu := ppu.NewPPU(cartridge, colorPalette)
-
-	nes.cpu = cpu
-	nes.ppu = ppu
+	nes.cpu = cpu.NewCPU(nes)
+	nes.ppu = ppu.NewPPU(cartridge, colorPalette)
 
 	return nes
 }
@@ -66,8 +71,13 @@ func (nes *NES) Write(addr uint16, value uint8) {
 func (nes *NES) Clock() {
 	nes.ppu.Clock()
 
+	// The CPU clocks once for every three PPU clocks
 	if nes.TotalCycles%3 == 0 {
+		// While a DMA transfer is happening the CPU's clock is suspended.
 		if nes.dmaTransfer {
+			// DMA dummy syncs the DMA transfer with total cycles. This ensures the
+			// OAM data read from the CPU during the DMA transfer occurs on even cycles and
+			// the subsquent write of that data to PPU memory occurs on that next odd cycle.
 			if nes.dmaDummy {
 				if nes.TotalCycles%2 == 1 {
 					nes.dmaDummy = false
@@ -78,7 +88,11 @@ func (nes *NES) Clock() {
 					nes.dmaData = nes.Read(addr)
 				} else {
 					nes.ppu.TransferDMAData(nes.dmaAddr, nes.dmaData)
+					nes.dmaAddr++
 
+					// When the incrementimg 8-bit DMA address wraps back around to 0
+					// the full 256 bytes of OAM memory have been written to the
+					// PPU memory and the DMA transfer has completed.
 					if nes.dmaData == 0x00 {
 						nes.dmaTransfer = false
 						nes.dmaDummy = true
