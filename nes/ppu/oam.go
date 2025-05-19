@@ -27,7 +27,7 @@ func (ppu *PPU) evaluateSprites() {
 		ppu.spritePatternShiftRegistersHigh[i] = 0
 	}
 
-	ppu.canSpriteZeroHit = true
+	ppu.canSpriteZeroHit = false
 
 	for i := range 64 {
 		if ppu.spriteCount > 8 {

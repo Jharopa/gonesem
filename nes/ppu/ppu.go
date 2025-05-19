@@ -2,7 +2,6 @@ package ppu
 
 import (
 	"gonesem/nes/cartridge"
-	"gonesem/nes/memory"
 	"image"
 	"image/color"
 )
@@ -43,11 +42,13 @@ type PPU struct {
 	attributeShiftResgisterLow  uint16
 	attributeShiftResgisterHigh uint16
 
-	spriteScanlineY                 [8]uint8
-	spriteScanlinePattern           [8]uint8
-	spriteScanlineAttributes        [8]uint8
-	spriteScanlineX                 [8]uint8
-	spriteCount                     uint8
+	spriteScanlineY          [8]uint8
+	spriteScanlinePattern    [8]uint8
+	spriteScanlineAttributes [8]uint8
+	spriteScanlineX          [8]uint8
+
+	spriteCount uint8
+
 	spritePatternShiftRegistersLow  [8]uint8
 	spritePatternShiftRegistersHigh [8]uint8
 
@@ -69,185 +70,14 @@ type PPU struct {
 
 func NewPPU(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *PPU {
 	return &PPU{
-		cartridge:     cartridge,
-		colorPalette:  colorPalette,
-		addressLatch:  false,
-		frame:         image.NewRGBA(image.Rect(0, 0, 256, 240)),
-		FrameComplete: false,
+		cartridge:            cartridge,
+		colorPalette:         colorPalette,
+		addressLatch:         false,
+		canSpriteZeroHit:     false,
+		isSpiteZeroRendering: false,
+		frame:                image.NewRGBA(image.Rect(0, 0, 256, 240)),
+		FrameComplete:        false,
 	}
-}
-
-/*
-Used by the CPU to read information from the PPU's registers or memory
-i.e. the connection from the CPU to PPU via the NES's main bus
-
-NOTE. It is important to keep in mind that the act of the CPU reading
-from the PPU can transform the state of the PPU, e.g. The CPU reading
-the status register via address 0x2002 will cause the the vertical blank
-flag in the status register and the address latch register to become unset.
-*/
-func (ppu *PPU) CPURead(addr uint16) uint8 {
-	var value uint8 = 0
-
-	switch addr {
-	case 0x0000: // PPUCTRL $2000
-		break
-	case 0x0001: // PPUMASK $2001
-		break
-	case 0x0002: // PPUSTATUS $2002
-		value = (uint8(ppu.status) & 0xE0) | (ppu.dataBuffer & 0x1F)
-
-		ppu.setStatus(StatusVerticalBlank, false)
-		ppu.addressLatch = false
-	case 0x0003: // OAMADDR $2003
-		break
-	case 0x0004: // OAMDATA $2004
-		value = ppu.oamData[ppu.oamAddr]
-	case 0x0005: // PPUSCROLL $2005
-		break
-	case 0x0006: // PPUADDR $2006
-		break
-	case 0x0007: // PPUDATA $2007
-		value = ppu.dataBuffer
-		ppu.dataBuffer = ppu.read(uint16(ppu.vramAddr))
-
-		if ppu.vramAddr >= 0x3F00 {
-			value = ppu.dataBuffer
-		}
-
-		ppu.incrementAddress()
-	}
-
-	return value
-}
-
-/*
-Used by the CPU to write information to the PPU's registers or memory
-i.e. the connection from the CPU to PPU via the NES's main bus
-*/
-func (ppu *PPU) CPUWrite(addr uint16, value uint8) {
-	switch addr {
-	case 0x0000: // PPUCTRL $2000
-		ppu.ctrl = Ctrl(value)
-		ppu.tramAddr = (ppu.tramAddr & 0xF3FF) | uint16(value&0x03)<<10
-	case 0x0001: // PPUMASK $2001
-		ppu.mask = Mask(value)
-	case 0x0002: // PPUSTATUS $2002
-		break
-	case 0x0003: // OAMADDR $2003
-		ppu.oamAddr = value
-	case 0x0004: // OAMDATA $2004
-		ppu.oamData[ppu.oamAddr] = value
-	case 0x0005: // PPUSCROLL $2005
-		if !ppu.addressLatch {
-			ppu.tramAddr = (ppu.tramAddr & 0xFFE0) | uint16(value)>>3
-			ppu.fineX = value & 0x07
-			ppu.addressLatch = true
-		} else {
-			ppu.tramAddr = (ppu.tramAddr & 0xFC1F) | uint16(value&0xF8)<<2
-			ppu.tramAddr = (ppu.tramAddr & 0x8FFF) | uint16(value&0x07)<<12
-			ppu.addressLatch = false
-		}
-	case 0x0006: // PPUADDR $2006
-		if !ppu.addressLatch {
-			ppu.tramAddr = (ppu.tramAddr & 0x00FF) | uint16(value&0x3F)<<8
-			ppu.addressLatch = true
-		} else {
-			ppu.tramAddr = (ppu.tramAddr & 0xFF00) | uint16(value)
-			ppu.vramAddr = ppu.tramAddr
-			ppu.addressLatch = false
-		}
-	case 0x0007: // PPUDATA $2007
-		ppu.write(uint16(ppu.vramAddr), value)
-		ppu.incrementAddress()
-	}
-}
-
-func (ppu *PPU) TransferDMAData(addr uint8, value uint8) {
-	ppu.oamData[addr] = value
-}
-
-/*
-Increments the PPU's memory address by 32 if the Ctrl register's increment mode bit is set;
-otherwise it will increment the PPU's memory address by 1
-*/
-func (ppu *PPU) incrementAddress() {
-	if ppu.getCtrl(CtrlIncrementMode) {
-		ppu.vramAddr += 0x20
-	} else {
-		ppu.vramAddr += 0x01
-	}
-}
-
-/*
-Used for reading from PPU's internal video memory, used in conjunction with
-write method to represent the PPU's internal bus and the memory available on that.
-*/
-func (ppu *PPU) read(addr uint16) uint8 {
-	switch {
-	// Pattern memory address space, i.e. CHR memory found on cartidge
-	case addr <= 0x1FFF:
-		return ppu.cartridge.CHRRead(addr)
-	// Nametable address space
-	case addr >= 0x2000 && addr <= 0x3EFF:
-		mirrorMode := ppu.cartridge.MirrorMode()
-		nameTableIdx := memory.MirroredNametableIdx(mirrorMode, addr)
-
-		return ppu.nameTable[nameTableIdx*0x400+addr%0x400]
-	// Palette table address sapce
-	case addr >= 0x3F00 && addr <= 0x3FFF:
-		// If n = 2^x then y % n ≡ y & n-1
-		// Example: 32 - 0010_0000
-		//          31 - 0001_1111
-		//          52 - 0011_0100
-		// 			52 % 32 = 20 or 0001_0100
-		// 			0011_0100 & 0001_1111 = 0001_0100 or 20
-		// This works because when moduloing someting against some 2^x can be done
-		// by taking all the lower order bits of that number below that 2^x value,
-		// i.e. if n >= 0 then 2^(x + n) / 2^x = 0
-		addr &= 0x1F
-
-		if addr == 0x0010 || addr == 0x0014 || addr == 0x0018 || addr == 0x001C {
-			addr -= 0x0010
-		}
-
-		return ppu.paletteTable[addr]
-	}
-
-	return 0
-}
-
-/*
-Used for writing to PPU's internal video memory, used in conjunction with
-readMemory method to represent the PPU's internal bus and the memory available on that.
-*/
-func (ppu *PPU) write(addr uint16, value uint8) {
-	switch {
-	// Pattern memory address space, i.e. CHR memory found on cartidge
-	// NOTE. Generally the cartridge contains ROM, however writes can be done
-	// in cases where the cartridge also contains CHR RAM.
-	case addr <= 0x1FFF:
-		ppu.cartridge.CHRWrite(addr, value)
-	// Name table address sapce
-	case addr >= 0x2000 && addr <= 0x3EFF:
-		mirrorMode := ppu.cartridge.MirrorMode()
-		nameTableIdx := memory.MirroredNametableIdx(mirrorMode, addr)
-
-		ppu.nameTable[nameTableIdx*0x400+addr%0x400] = value
-	// Palette table address sapce
-	case addr >= 0x3F00 && addr <= 0x3FFF:
-		addr &= 0x1F
-
-		if addr == 0x0010 || addr == 0x0014 || addr == 0x0018 || addr == 0x001C {
-			addr -= 0x0010
-		}
-
-		ppu.paletteTable[addr] = value
-	}
-}
-
-func (ppu *PPU) getColourFromPaletteMemory(palette uint8, pixel uint8) color.RGBA {
-	return ppu.colorPalette[ppu.read(0x3F00+uint16(palette<<2)+uint16(pixel))&0x3F]
 }
 
 /*
@@ -306,59 +136,6 @@ func (ppu *PPU) copyAddressY() {
 	if ppu.getMask(MaskShowBackground) || ppu.getMask(MaskShowSprites) {
 		ppu.vramAddr = (ppu.vramAddr & 0x041F) | (ppu.tramAddr & 0x7BE0)
 	}
-}
-
-func (ppu *PPU) getNametableByte() {
-	ppu.nameTableByte = ppu.read(0x2000 | (uint16(ppu.vramAddr) & 0x0FFF))
-}
-
-func (ppu *PPU) getAttributeTableByte() {
-	ppu.attributeTableByte = ppu.read(0x23C0 | (ppu.vramAddr & 0x0C00) | ((ppu.vramAddr >> 0x04) & 0x38) | ((ppu.vramAddr >> 0x02) & 0x07))
-
-	if (ppu.vramAddr>>5)&0x02 == 0x02 {
-		ppu.attributeTableByte >>= 4
-	}
-
-	if ppu.vramAddr&0x02 == 0x02 {
-		ppu.attributeTableByte >>= 2
-	}
-
-	ppu.attributeTableByte &= 0x03
-}
-
-func (ppu *PPU) getPatternTableByte(low bool) uint8 {
-	var (
-		tableIdx    uint16
-		fineY       uint16
-		planeOffset uint16
-		address     uint16
-	)
-
-	if !ppu.getCtrl(CtrlBackgroundTableAddress) {
-		tableIdx = 0
-	} else {
-		tableIdx = 1
-	}
-
-	fineY = (ppu.vramAddr >> 12) & 0x07
-
-	if low {
-		planeOffset = 0
-	} else {
-		planeOffset = 8
-	}
-
-	address = tableIdx*0x1000 + uint16(ppu.nameTableByte)*16 + fineY + planeOffset
-
-	return ppu.read(address)
-}
-
-func (ppu *PPU) getPatternTableByteLow() {
-	ppu.patternTableByteLow = ppu.getPatternTableByte(true)
-}
-
-func (ppu *PPU) getPatternTableByteHigh() {
-	ppu.patternTableByteHigh = ppu.getPatternTableByte(false)
 }
 
 func (ppu *PPU) loadShiftRegisters() {
@@ -428,10 +205,10 @@ func (ppu *PPU) Clock() {
 				ppu.spritePatternShiftRegistersHigh[i] = 0
 
 				for i := range 8 {
-					ppu.spriteScanlineY[i] = 0x00
-					ppu.spriteScanlinePattern[i] = 0x00
-					ppu.spriteScanlineAttributes[i] = 0x00
-					ppu.spriteScanlineX[i] = 0x00
+					ppu.spriteScanlineY[i] = 0xFF
+					ppu.spriteScanlinePattern[i] = 0xFF
+					ppu.spriteScanlineAttributes[i] = 0xFF
+					ppu.spriteScanlineX[i] = 0xFF
 				}
 
 			}
