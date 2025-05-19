@@ -25,5 +25,5 @@ go.work.sum
 .env
 
 # Project
-test/data/roms
-test/data/pals
+/roms
+/pals

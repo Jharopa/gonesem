@@ -51,6 +51,9 @@ type PPU struct {
 	spritePatternShiftRegistersLow  [8]uint8
 	spritePatternShiftRegistersHigh [8]uint8
 
+	canSpriteZeroHit     bool
+	isSpiteZeroRendering bool
+
 	EmitNMI bool
 
 	nameTable    [2048]uint8
@@ -418,10 +421,19 @@ func (ppu *PPU) Clock() {
 		if ppu.scanline == -1 && ppu.cycle == 1 {
 			ppu.setStatus(StatusVerticalBlank, false)
 			ppu.setStatus(StatusSpriteOverflow, false)
+			ppu.setStatus(StatusSpriteZeroHit, false)
 
 			for i := range 8 {
 				ppu.spritePatternShiftRegistersLow[i] = 0
 				ppu.spritePatternShiftRegistersHigh[i] = 0
+
+				for i := range 8 {
+					ppu.spriteScanlineY[i] = 0x00
+					ppu.spriteScanlinePattern[i] = 0x00
+					ppu.spriteScanlineAttributes[i] = 0x00
+					ppu.spriteScanlineX[i] = 0x00
+				}
+
 			}
 		}
 
@@ -544,6 +556,8 @@ func (ppu *PPU) Clock() {
 			pixelHigh uint8
 		)
 
+		ppu.isSpiteZeroRendering = false
+
 		for i := range ppu.spriteCount {
 			if ppu.spriteScanlineX[i] == 0 {
 				if (ppu.spritePatternShiftRegistersLow[i] & 0x80) > 0 {
@@ -569,6 +583,10 @@ func (ppu *PPU) Clock() {
 				}
 
 				if foregroundPixel != 0 {
+					if i == 0 {
+						ppu.isSpiteZeroRendering = true
+					}
+
 					break
 				}
 			}
@@ -604,6 +622,20 @@ func (ppu *PPU) Clock() {
 		} else {
 			pixel = backgroundPixel
 			palette = backgroundPalette
+		}
+
+		if ppu.canSpriteZeroHit && ppu.isSpiteZeroRendering {
+			if ppu.getMask(MaskShowBackground) && ppu.getMask(MaskShowSprites) {
+				if !ppu.getMask(MaskShowBackgroundLeft) || ppu.getMask(MaskShowSpritesLeft) {
+					if ppu.cycle >= 9 && ppu.cycle < 258 {
+						ppu.setStatus(StatusSpriteZeroHit, true)
+					}
+				} else {
+					if ppu.cycle >= 1 && ppu.cycle < 258 {
+						ppu.setStatus(StatusSpriteZeroHit, true)
+					}
+				}
+			}
 		}
 	}
 

@@ -15,6 +15,9 @@ type NES struct {
 
 	ram [2048]uint8
 
+	Controller      [2]uint8
+	controllerState [2]uint8
+
 	dmaPage uint8
 	dmaAddr uint8
 	dmaData uint8
@@ -43,26 +46,40 @@ func NewNES(cartridge *cartridge.Cartridge, colorPalette [64]color.RGBA) *NES {
 }
 
 func (nes *NES) Read(addr uint16) uint8 {
+	var value uint8 = 0x00
+
 	switch {
 	case addr <= 0x1FFF:
-		return nes.ram[addr%0x0800]
+		value = nes.ram[addr%0x0800]
 	case addr >= 0x2000 && addr <= 0x3FFF:
-		return nes.ppu.CPURead(addr % 0x0008)
+		value = nes.ppu.CPURead(addr % 0x0008)
+	case addr == 0x4016 || addr == 0x4017:
+		if nes.controllerState[addr&0x0001]&0x80 > 0 {
+			value = 1
+		} else {
+			value = 0
+		}
+
+		nes.controllerState[addr&0x0001] <<= 1
 	default:
-		return nes.cartridge.PRGRead(addr)
+		value = nes.cartridge.PRGRead(addr)
 	}
+
+	return value
 }
 
 func (nes *NES) Write(addr uint16, value uint8) {
 	switch {
 	case addr <= 0x1FFF:
-		nes.ram[addr%0x0800] = value
+		nes.ram[addr&0x07FF] = value
 	case addr >= 0x2000 && addr <= 0x3FFF:
-		nes.ppu.CPUWrite(addr%0x0008, value)
+		nes.ppu.CPUWrite(addr&0x0007, value)
 	case addr == 0x4014:
 		nes.dmaPage = value
 		nes.dmaAddr = 0x00
 		nes.dmaTransfer = true
+	case addr == 0x4016 || addr == 0x4017:
+		nes.controllerState[addr&0x0001] = nes.Controller[addr&0x0001]
 	default:
 		nes.cartridge.PRGWrite(addr, value)
 	}
@@ -93,7 +110,7 @@ func (nes *NES) Clock() {
 					// When the incrementimg 8-bit DMA address wraps back around to 0
 					// the full 256 bytes of OAM memory have been written to the
 					// PPU memory and the DMA transfer has completed.
-					if nes.dmaData == 0x00 {
+					if nes.dmaAddr == 0x00 {
 						nes.dmaTransfer = false
 						nes.dmaDummy = true
 					}

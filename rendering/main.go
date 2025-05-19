@@ -19,7 +19,8 @@ import (
 
 const width, height, scale = 256, 240, 3
 const title = "NES"
-const fps float64 = (1.0 / 60.0)
+
+var emulationPaused = false
 
 const vertexShaderSource = `
 	#version 460
@@ -117,9 +118,11 @@ func main() {
 	for !window.ShouldClose() {
 		start := time.Now()
 
+		handleInput(nes, window)
+
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		for !nes.FrameComplete() {
+		for !nes.FrameComplete() && !emulationPaused {
 			nes.Clock()
 		}
 		nes.ResetFrameComplete()
@@ -143,13 +146,13 @@ func main() {
 }
 
 func nesInit() (*nes.NES, error) {
-	cartridge, err := cartridge.NewCartridge("../test/data/roms/Donkey Kong.nes")
+	cartridge, err := cartridge.NewCartridge("../roms/Super Mario Bros.nes")
 
 	if err != nil {
 		return nil, err
 	}
 
-	colorPalette, err := color.NewColorPalette("../test/data/pals/Nintendulator.pal")
+	colorPalette, err := color.NewColorPalette("../pals/Nintendulator.pal")
 
 	if err != nil {
 		return nil, err
@@ -222,6 +225,70 @@ func glInit() (uint32, error) {
 	}
 
 	return program, nil
+}
+
+func handleInput(nes *nes.NES, window *glfw.Window) {
+	nes.Controller[0] = 0x00
+
+	if isKeyHeld(glfw.KeyX, window) { // A
+		nes.Controller[0] |= 0x80
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyZ, window) { // B
+		nes.Controller[0] |= 0x40
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyA, window) { // Select
+		nes.Controller[0] |= 0x20
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyS, window) { // Start
+		nes.Controller[0] |= 0x10
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyUp, window) { // Up
+		nes.Controller[0] |= 0x08
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyDown, window) { // Down
+		nes.Controller[0] |= 0x04
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyLeft, window) { // Left
+		nes.Controller[0] |= 0x02
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if isKeyHeld(glfw.KeyRight, window) { // Right
+		nes.Controller[0] |= 0x01
+	} else {
+		nes.Controller[0] |= 0x00
+	}
+
+	if window.GetKey(glfw.KeyP) == glfw.Press {
+		emulationPaused = !emulationPaused
+	}
+}
+
+func isKeyHeld(key glfw.Key, window *glfw.Window) bool {
+	if window.GetKey(key) == glfw.Press || window.GetKey(key) == glfw.Repeat {
+		return true
+	} else {
+		return false
+	}
 }
 
 func createVao(vertices []float32, indices []uint32) uint32 {

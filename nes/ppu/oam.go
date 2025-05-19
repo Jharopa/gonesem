@@ -1,6 +1,8 @@
 package ppu
 
-import "math/bits"
+import (
+	"math/bits"
+)
 
 /*
 Finds up to the first eight sprites that intersect the next scanline,
@@ -25,6 +27,8 @@ func (ppu *PPU) evaluateSprites() {
 		ppu.spritePatternShiftRegistersHigh[i] = 0
 	}
 
+	ppu.canSpriteZeroHit = true
+
 	for i := range 64 {
 		if ppu.spriteCount > 8 {
 			break
@@ -35,6 +39,10 @@ func (ppu *PPU) evaluateSprites() {
 
 		if row >= 0 && row < int16(ppu.getSpriteHeight()) {
 			if ppu.spriteCount < 8 {
+				if i == 0 {
+					ppu.canSpriteZeroHit = true
+				}
+
 				ppu.spriteScanlineY[ppu.spriteCount] = ppu.oamData[i*4]            // Y position
 				ppu.spriteScanlinePattern[ppu.spriteCount] = ppu.oamData[i*4+1]    // Index number
 				ppu.spriteScanlineAttributes[ppu.spriteCount] = ppu.oamData[i*4+2] // Attributes
