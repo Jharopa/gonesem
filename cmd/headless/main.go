@@ -1,9 +1,9 @@
 package main
 
 import (
-	"gonesem/nes"
-	"gonesem/nes/cartridge"
-	"gonesem/nes/color"
+	"gonesem/internal/cartridge"
+	"gonesem/internal/color"
+	"gonesem/internal/nes"
 	"log"
 	"os"
 )

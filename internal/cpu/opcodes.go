@@ -1,6 +1,6 @@
 package cpu
 
-import "gonesem/nes/util"
+import "gonesem/internal/util"
 
 // --------------- //
 // Offical Opcodes //

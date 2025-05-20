@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"gonesem/nes/cpu"
+	"gonesem/internal/cpu"
 )
 
 type TestMemory struct {

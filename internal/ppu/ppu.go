@@ -1,7 +1,7 @@
 package ppu
 
 import (
-	"gonesem/nes/cartridge"
+	"gonesem/internal/cartridge"
 	"image"
 	"image/color"
 )

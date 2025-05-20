@@ -1,9 +1,9 @@
 package nes
 
 import (
-	"gonesem/nes/cartridge"
-	"gonesem/nes/cpu"
-	"gonesem/nes/ppu"
+	"gonesem/internal/cartridge"
+	"gonesem/internal/cpu"
+	"gonesem/internal/ppu"
 	"image"
 	"image/color"
 )

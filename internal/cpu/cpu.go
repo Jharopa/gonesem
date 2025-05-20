@@ -2,7 +2,7 @@ package cpu
 
 import (
 	"fmt"
-	"gonesem/nes/memory"
+	"gonesem/internal/memory"
 )
 
 type Status uint8

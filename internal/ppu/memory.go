@@ -1,7 +1,7 @@
 package ppu
 
 import (
-	"gonesem/nes/memory"
+	"gonesem/internal/memory"
 	"image/color"
 )
 

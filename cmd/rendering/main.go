@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"gonesem/nes"
-	"gonesem/nes/cartridge"
-	"gonesem/nes/color"
+	"gonesem/internal/cartridge"
+	"gonesem/internal/color"
+	"gonesem/internal/nes"
 	"image"
 	"log"
 	"os"

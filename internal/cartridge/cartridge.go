@@ -3,7 +3,7 @@ package cartridge
 import (
 	"encoding/binary"
 	"fmt"
-	"gonesem/nes/memory"
+	"gonesem/internal/memory"
 	"io"
 	"os"
 )
