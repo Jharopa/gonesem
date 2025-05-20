@@ -5,6 +5,22 @@ import (
 	"image/color"
 )
 
+func (ppu *PPU) getColourFromPaletteMemory(palette uint8, pixel uint8) color.RGBA {
+	return ppu.colorPalette[ppu.read(0x3F00+uint16(palette<<2)+uint16(pixel))&0x3F]
+}
+
+/*
+Increments the PPU's memory address by 32 if the Ctrl register's increment mode bit is set;
+otherwise it will increment the PPU's memory address by 1
+*/
+func (ppu *PPU) incrementAddress() {
+	if ppu.getCtrl(CtrlIncrementMode) {
+		ppu.vramAddr += 0x20
+	} else {
+		ppu.vramAddr += 0x01
+	}
+}
+
 /*
 Used by the CPU to read information from the PPU's registers or memory
 i.e. the connection from the CPU to PPU via the NES's main bus
@@ -91,22 +107,6 @@ func (ppu *PPU) CPUWrite(addr uint16, value uint8) {
 	}
 }
 
-func (ppu *PPU) TransferDMAData(addr uint8, value uint8) {
-	ppu.oamData[addr] = value
-}
-
-/*
-Increments the PPU's memory address by 32 if the Ctrl register's increment mode bit is set;
-otherwise it will increment the PPU's memory address by 1
-*/
-func (ppu *PPU) incrementAddress() {
-	if ppu.getCtrl(CtrlIncrementMode) {
-		ppu.vramAddr += 0x20
-	} else {
-		ppu.vramAddr += 0x01
-	}
-}
-
 /*
 Used for reading from PPU's internal video memory, used in conjunction with
 write method to represent the PPU's internal bus and the memory available on that.
@@ -172,8 +172,4 @@ func (ppu *PPU) write(addr uint16, value uint8) {
 
 		ppu.paletteTable[addr] = value
 	}
-}
-
-func (ppu *PPU) getColourFromPaletteMemory(palette uint8, pixel uint8) color.RGBA {
-	return ppu.colorPalette[ppu.read(0x3F00+uint16(palette<<2)+uint16(pixel))&0x3F]
 }

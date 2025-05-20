@@ -20,16 +20,16 @@ func (ppu *PPU) getAttributeTableByte() {
 
 func (ppu *PPU) getPatternTableByte(low bool) uint8 {
 	var (
-		tableIdx    uint16
+		baseAddr    uint16
 		fineY       uint16
 		planeOffset uint16
 		address     uint16
 	)
 
 	if !ppu.getCtrl(CtrlBackgroundTableAddress) {
-		tableIdx = 0
+		baseAddr = 0
 	} else {
-		tableIdx = 1
+		baseAddr = 0x1000
 	}
 
 	fineY = (ppu.vramAddr >> 12) & 0x07
@@ -40,7 +40,7 @@ func (ppu *PPU) getPatternTableByte(low bool) uint8 {
 		planeOffset = 8
 	}
 
-	address = tableIdx*0x1000 + uint16(ppu.nameTableByte)*16 + fineY + planeOffset
+	address = baseAddr + uint16(ppu.nameTableByte)*16 + fineY + planeOffset
 
 	return ppu.read(address)
 }
