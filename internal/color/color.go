@@ -15,13 +15,13 @@ func NewColorPalette(palFilePath string) ([64]color.RGBA, error) {
 	palFile, err := os.Open(palFilePath)
 
 	if err != nil {
-		return paletteColors, fmt.Errorf("failed to open palette file %s: %s", palFilePath, err)
+		return paletteColors, fmt.Errorf("failed to open palette file %s %s", palFilePath, err)
 	}
 
 	stat, err := palFile.Stat()
 
 	if err != nil {
-		return paletteColors, fmt.Errorf("failed to retrieve palette file stats for %s: %s", palFilePath, err)
+		return paletteColors, fmt.Errorf("failed to retrieve palette file stats for %s %s", palFilePath, err)
 	}
 
 	if stat.Size() != 192 {
@@ -34,7 +34,7 @@ func NewColorPalette(palFilePath string) ([64]color.RGBA, error) {
 	_, err = bufio.NewReader(palFile).Read(palleteFileColors)
 
 	if err != nil && err != io.EOF {
-		return paletteColors, fmt.Errorf("failed to read %s palette file into colors buffer: %s", palFilePath, err)
+		return paletteColors, fmt.Errorf("failed to read %s palette file into colors buffer %s", palFilePath, err)
 	}
 
 	// Populate palette colors

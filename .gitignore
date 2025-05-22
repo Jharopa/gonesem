@@ -27,3 +27,5 @@ go.work.sum
 # Project
 /roms
 /pals
+
+/cmd/playground

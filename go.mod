@@ -2,7 +2,10 @@ module gonesem
 
 go 1.22.6
 
+require github.com/gen2brain/raylib-go/raylib v0.0.0-20250521210303-fca3bf26c568
+
 require (
-	github.com/go-gl/gl v0.0.0-20231021071112-07e5d0ea2e71
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20240506104042-037f3cc74f2a
+	github.com/ebitengine/purego v0.8.0 // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
+	golang.org/x/sys v0.25.0 // indirect
 )
