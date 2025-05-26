@@ -8,11 +8,17 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+const (
+	width  = 256
+	height = 240
+)
+
 type Application struct {
 	nes          *nes.NES
 	screenWidth  int
 	screenHeight int
 	scale        int
+	shader       rl.Shader
 }
 
 func NewApplication(options *Options) (*Application, error) {
@@ -23,18 +29,21 @@ func NewApplication(options *Options) (*Application, error) {
 	}
 
 	rl.InitWindow(
-		int32(256*options.scale),
-		int32(240*options.scale),
+		int32(width*options.scale),
+		int32(height*options.scale),
 		"GoNESEm",
 	)
 	rl.SetTraceLogLevel(rl.LogError)
 	rl.SetTargetFPS(60)
 
+	shader := rl.LoadShader("", "../../resources/shaders/scanlines.fs")
+
 	return &Application{
 		nes:          nes,
-		screenWidth:  256,
-		screenHeight: 240,
+		screenWidth:  width,
+		screenHeight: height,
 		scale:        options.scale,
+		shader:       shader,
 	}, nil
 }
 
@@ -73,6 +82,8 @@ func (app *Application) Run() {
 
 		rl.ClearBackground(rl.RayWhite)
 
+		rl.BeginShaderMode(app.shader)
+
 		rl.DrawTexturePro(
 			nesTexture,
 			rl.NewRectangle(0, 0, float32(nesTexture.Width), float32(nesTexture.Height)),
@@ -81,6 +92,8 @@ func (app *Application) Run() {
 			float32(0),
 			rl.White,
 		)
+
+		rl.EndShaderMode()
 
 		rl.EndDrawing()
 
